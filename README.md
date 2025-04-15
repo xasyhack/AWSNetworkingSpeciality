@@ -35,4 +35,25 @@
 - OnDemand course (Paid)
   - [Udemy Neal Davis ~ 10 hours](https://www.udemy.com/course/aws-advanced-networking-specialty-ans/?couponCode=ST14MT150425G1)
   - Pluralsight Andry Estes ~ 39 hours](https://app.pluralsight.com/paths/certificate/aws-certified-advanced-networking-specialty-ans-c01)
+ 
+**Introduction**
+- learn: design, implement, operate and maintain hybrid and cloud-based network, tasks automation, secure AWS network
+- hands-on: manage AWS VPC, implement hybrid connectivity with on-premises network, monitor & performance
+- Prerequisites network knowledge: IPV2 and IPv6 add, Basic IPv4 subnetting, IP routing
+- Prerequisites AWS knowledge: IAM, EC2, CloudWatch, CloudTrail, Config, S3 buckets, CloudFormation, VPC
+- Tools to use: Boto3 (AWS SDK for Python to interact with AWS services), AWS CLI (Control AWS services from terminal), [IP/CIDR calculator](https://cidr.xyz/), ipcalc (python script)
+
+# Design and Implement AWS networks
+
+# Configure Network Integration with Application Services
+
+# Hybrid Networking Basis and VPNs
+
+# AWS Direct Connect and Hybrid DNS
+
+# Transitive Networking 
+
+# Security and Compliance
+
+# Automate AWS tasks
       
