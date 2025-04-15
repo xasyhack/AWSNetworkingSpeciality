@@ -13,7 +13,6 @@
     - routing strategy between on-premises and AWS
     - routing strategy that include multiple AWS accounts, AWS Regions, and VPCs
   - Domain 2: Network Implementation (26% of scored content)
-    - 
   - Domain 3: Network Management and Operation (20% of scored content)
   - Domain 4: Network Security, Compliance, and Governance (24% of scored content) 
 
