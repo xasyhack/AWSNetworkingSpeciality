@@ -118,7 +118,96 @@
 | Cost                | Lower cost than FT                            | Higher cost due to **redundancy**                |
 | Example             | Active-Passive Load Balancer                  | RAID 1, EC2 with auto-recovery, redundant power  |
 
-**VPC Basic Networking Design**
+### VPC Basic Networking Design
+**What Is a VPC?**
+- A logically isolated network within AWS cloud.
+- You define IP ranges, subnets, route tables, gateways, and security settings.
+- Acts like your own private data center in the cloud.
+
+**CIDR Block**
+- Calculate the number of IPv4 addresses in a /24 subnet IP CIDR.
+  Example: `10.0.0.0/24` → 32 - /24 = 2^8 = 256 host IPs - 5 reserved IPs = 251 available host IPs
+
+**Subnets**
+| Type        | Description |
+|-------------|-------------|
+| **Public**  | Has a route to the internet via IGW. |
+| **Private** | No direct route to internet. Access via NAT Gateway. |
+- One subnet = one AZ.
+- Multiple subnets = multi-AZ architecture (for HA).
+
+**VPC Core Components**
+| Component           | Description |
+|---------------------|-------------|
+| **Subnets**         | Divide VPC into smaller networks (public/private). |
+| **Route Tables**    | Define network traffic paths. |
+| **Internet Gateway (IGW)** | Enables internet access for public subnets. |
+| **NAT Gateway/Instance** | Allows private subnets to access the internet. |
+| **Security Groups** | Stateful firewall rules at the instance level. |
+| **Network ACLs**    | Stateless firewall rules at the subnet level. |
+| **Elastic IPs**     | Static public IP addresses. |
+| **DHCP Options Set**| Controls DNS resolution behavior in the VPC. |
+
+**Internet Gateway vs. NAT Gateway**
+| Feature              | Internet Gateway             | NAT Gateway                      |
+|----------------------|------------------------------|----------------------------------|
+| Public IP required?  | Yes                          | Yes (Elastic IP attached)        |
+| Direction            | Inbound & Outbound           | Outbound only                    |
+| Use case             | Public access (e.g. web app) | Internet access for private subnets |
+
+**VPC Peering**
+- Connect two VPCs (same or different regions/accounts).
+- Uses AWS backbone; **no transitive peering**.
+- Must update route tables manually.
+
+**VPC Endpoints**
+| Type           | Description |
+|----------------|-------------|
+| **Interface Endpoint** | Private IP access to AWS services via ENI (e.g. S3, SNS). |
+| **Gateway Endpoint**   | For **S3 and DynamoDB** only. Uses route table entry. |
+
+**VPC Flow Logs**
+- Capture **network traffic metadata** for analysis.
+- Can be sent to **CloudWatch Logs** or **S3**.
+- Useful for troubleshooting or compliance.
+
+**VPC Limits (default, can be increased)**
+- 5 VPCs per region.
+- 200 subnets per VPC.
+- 500 security groups per VPC.
+- 50 route tables per VPC.
+
+**Tips for AWS Advanced Networking Exam – VPC Focus**
+- Understand CIDR math
+  - Be quick with subnetting calculations
+  - Know how many IPs are in `/16`, `/24`, `/28`, etc
+  - Remember: 5 IPs are reserved per subnet (first 4 + last)
+- Know routing logic
+  - How routing tables determine traffic flow
+  - Difference between local routes, IGW, NAT, and VPC peering entries
+- VPC Peering vs Transit Gateway vs PrivateLink
+  - VPC Peering: One-to-one, no transitive routing.
+  - Transit Gateway (TGW): One-to-many, scalable hub-spoke.
+  - PrivateLink: Service-centric, internal access via ENI.
+- Security Groups vs NACLs
+  - Security Groups: Stateful, instance-level.
+  - NACLs: Stateless, subnet-level, order of rules matters.
+- Internet Gateway vs NAT Gateway
+  - Understand which subnet requires which component
+  - Know use cases: public-facing EC2 vs. internal EC2 needing updates
+- VPC Endpoints
+  - Gateway endpoints: for S3/DynamoDB only, free, added in route tables.
+  - Interface endpoints: private IPs, cost per hour + data, supported for most AWS services.
+- IPv6 in VPCs
+  - Dual-stack enabled.
+  - No NAT with IPv6.
+  - IGW required for IPv6 internet access.
+- VPC Flow Logs & Reachability Analyzer
+  - VPC Flow Logs for traffic metadata (no payload).
+  - Use Reachability Analyzer for **packet path tracing**.
+- Hybrid Networking
+  - Understand how VPC connects to on-prem via **Site-to-Site VPN** or **Direct Connect**.
+  - Know HA configurations: multiple tunnels, BGP, VGW.
 
 **Default VPC**
 
