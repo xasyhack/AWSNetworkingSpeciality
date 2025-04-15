@@ -209,7 +209,7 @@
   - Understand how VPC connects to on-prem via **Site-to-Site VPN** or **Direct Connect**.
   - Know HA configurations: multiple tunnels, BGP, VGW.
 
-**Default VPC**
+### Default VPC
 
 **Subnets, VPC Routers, and Route tables**
 
