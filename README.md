@@ -269,7 +269,7 @@
     - `10.0.1.0/24` → NAT
     - Traffic to `10.0.1.5` uses `10.0.1.0/24` route
 
-**Exam Tips**
+**🧠 Exam Tips**
 - Know when to use:
   - IGW vs NAT Gateway
   - Peering vs Transit Gateway
@@ -283,6 +283,40 @@
 - Route tables apply at **subnet level**, not instance level
 
 ### 📖 IP Party: BYOIP
+- **Bring Your Own IP (BYOIP)** allows you to bring your **public IPv4 or IPv6 address ranges** to AWS.
+- AWS advertises these IPs on your behalf, enabling you to:
+  - Maintain existing IP reputation and branding.
+  - Use static IPs across AWS services.
+  - Support legacy systems requiring fixed IPs.
+  - 
+**Requirements**
+- **IP Range**: Must be a **/24 IPv4** or **/56 IPv6** block.
+- **Ownership**: IPs must be registered to your organization with a Regional Internet Registry (RIR) like **ARIN**, **RIPE**, or **APNIC**.
+- **Authorization**: Create a **Route Origin Authorization (ROA)** for AWS ASNs **16509** and **14618**.
+- **Verification**: Prove control via:
+  - **X.509 certificate** if RIR supports RDAP.
+  - **DNS TXT record** using Amazon VPC IP Address Manager (IPAM).
+ 
+**Use Cases**
+- **Global Accelerator**: Assign BYOIP addresses to accelerators for consistent IPs globally.
+- **Network Load Balancer (NLB)**: Use BYOIP Elastic IPs for frontend IPs.
+- **Legacy Applications**: Maintain existing IPs to avoid reconfiguration.
+- **Content Localization**: Combine BYOIP with **RFC 8805** for precise geolocation control.
+ 
+**BYOIP Workflow**
+1. **Prepare**: Ensure IP range meets AWS requirements.
+2. **Authorize**: Set up ROA with your RIR.
+3. **Provision**: Submit BYOIP request in AWS.
+4. **Advertise**: AWS begins advertising your IP range.
+5. **Allocate**: Create Elastic IPs from your BYOIP pool.
+6. **Assign**: Attach Elastic IPs to AWS resources (e.g., EC2, NLB).
+
+**🧠 Exam Tips**
+- **BYOIP** is ideal for scenarios requiring **static, recognizable public IPs**.
+- **ROA** is mandatory for AWS to advertise your IP range.
+- **Elastic IPs** from BYOIP pools can be used with services like **EC2**, **NAT Gateway**, and **NLB**.
+- **Global Accelerator** supports BYOIP for consistent IP addresses across regions.
+- **IP Reputation**: AWS may reject IP ranges with poor reputation.
 
 ### 📖 Elastic Network Interface, Elastic IP and Internet Gateway
 
