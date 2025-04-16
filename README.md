@@ -42,7 +42,7 @@
 - Hands-on labs
   - https://github.com/pluralsight-cloud/aws-certified-advanced-networking-specialty 
  
-**Introduction**
+## Introduction
 - learn: design, implement, operate and maintain hybrid and cloud-based network, tasks automation, secure AWS network
 - hands-on: manage AWS VPC, implement hybrid connectivity with on-premises network, monitor & performance
 - prerequisites network knowledge: IPV2 and IPv6 add, Basic IPv4 subnetting, IP routing
@@ -52,14 +52,9 @@
   - AWS of the cloud: compute, storage, db, networking, hardware, physical security, global infra)
   - Customer in the cloud: data, identity management, platform, app, OS, network & firewall config, encryption, network traffic protection
 
-# Design and Implement AWS networks
-**Intro**
-- what features:
-- whwat considerations:
-- different parts of VPC
-- troubleshoot and secure VPC
+## Design and Implement AWS networks
 
-### AWS Global Infrastructure 
+### 📖 AWS Global Infrastructure 
 **Core Components**
 - **Regions**: Physically isolated locations worldwide with multiple Availability Zones (AZs). E.g `us-east-1`
 - **Availability Zones (AZs)**: One or more data centers with independent power, networking, and connectivity. Low-latency links connect AZs. E.g `us-east-1a`. **Availability Zone ID** uniquely identify each physical AZ (use for cross account architecture). E.g `use1-az1`
@@ -104,11 +99,11 @@
   - **Reachability Analyzer**
   - **CloudWatch**
 
-### Private and Public AWS Services
+### 📖 Private and Public AWS Services
 - Public AWS Services: Services accessed over the public internet (Without VPC). E.g S3, Lambda, SNS/SQS, DynamoDB, API Gateway, CloudFront. Secure via IAM policies, VPC endpoints, WAF or CloudFront.
 - Private AWS Services: Services not exposed to the public internet (contained within your VPC); require private IP address to access. E.g EC2, RDS, ElastiCache, EFS, PrivateLink . Secure via security groups, network ACLs, Route tables
 
-### Disaster Recovery and High Availability
+### 📖 Disaster Recovery and High Availability
 | Aspect              | High Availability (HA)                         | Fault Tolerance (FT)                             |
 |---------------------|-----------------------------------------------|--------------------------------------------------|
 | Definition          | Ensures a system is **continuously operational** with minimal downtime.  | Ensures a system **continues to operate perfectly** even when components fail.  |
@@ -118,7 +113,7 @@
 | Cost                | Lower cost than FT                            | Higher cost due to **redundancy**                |
 | Example             | Active-Passive Load Balancer                  | RAID 1, EC2 with auto-recovery, redundant power  |
 
-### VPC Basic Networking Design
+### 📖 VPC Basic Networking Design
 **What Is a VPC?**
 - A logically isolated network within AWS cloud.
 - You define IP ranges, subnets, route tables, gateways, and security settings.
@@ -209,7 +204,7 @@
   - Understand how VPC connects to on-prem via **Site-to-Site VPN** or **Direct Connect**.
   - Know HA configurations: multiple tunnels, BGP, VGW.
 
-### Default VPC
+### 📖 Default VPC
 - Automatically created by AWS in each region (per account).
 
 | Feature                 | Default VPC Behavior                           |
@@ -222,7 +217,7 @@
 | CIDR Range             | `172.31.0.0/16`                                |
 | Auto-assign Public IP  | Enabled by default                             |
 
-**Subnets, VPC Routers, and Route tables**
+### 📖 Subnets, VPC Routers, and Route tables
 **Subnets**
 - A **subnet** is a range of IP addresses in your VPC.
 - **Types**:
@@ -287,28 +282,30 @@
 - Multiple subnets can share one route table
 - Route tables apply at **subnet level**, not instance level
 
-**IP Party**
+### 📖 IP Party: BYOIP
 
-**Elastic Network Interface, Elastic IP and Internet Gateway**
+### 📖 Elastic Network Interface, Elastic IP and Internet Gateway
 
-**Traffic control: Network Access Control Lists and Security Groups**
+### 📖 Traffic control: Network Access Control Lists and Security Groups
 
-**NAT Gateway**
+### 📖 NAT Gateway
 
-VPC Endpoint
+### 📖 VPC Endpoint
 
-VPC Peering
+### 📖 VPC Peering
 
-VPCs with Jump Server or Session Manager  
-IPv6 in AWS VPC
+### 📖 Jumping into VPCs with Jump Server or Session Manager  
 
-Reachabiliyt Analyzer
+### 📖 Consideration for IPv6 in AWS VPC
 
-VPC Flow Logs
+### 📖 Reachabiliyt Analyzer
 
-Network Performance
+### 📖 VPC Flow Logs
 
-Managing Global Network with AWS Cloud WAN
+### 📖 Network Performance
+
+### 📖 Managing Global Network with AWS Cloud WAN
+
 
 **AWS Global Infrastructure**
 
