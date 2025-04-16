@@ -210,8 +210,82 @@
   - Know HA configurations: multiple tunnels, BGP, VGW.
 
 ### Default VPC
+- Automatically created by AWS in each region (per account).
+
+| Feature                 | Default VPC Behavior                           |
+|-------------------------|------------------------------------------------|
+| Subnets                | 1 public subnet per AZ in the region           |
+| Internet Gateway (IGW) | Attached by default                            |
+| Route Table            | Routes `0.0.0.0/0` to the IGW                  |
+| Network ACLs           | Allow all inbound and outbound by default      |
+| Security Group         | Default SG allows all outbound, no inbound     |
+| CIDR Range             | `172.31.0.0/16`                                |
+| Auto-assign Public IP  | Enabled by default                             |
 
 **Subnets, VPC Routers, and Route tables**
+**Subnets**
+- A **subnet** is a range of IP addresses in your VPC.
+- **Types**:
+  - **Public Subnet**: Has a route to an Internet Gateway (IGW).
+  - **Private Subnet**: No direct route to IGW; uses NAT for outbound internet.
+  - **Isolated Subnet**: No internet access (no IGW/NAT).
+- **Subnet Sizing**:
+  - Must be within the VPC CIDR range.
+  - Cannot overlap with other subnets in the same VPC.
+  - Size range: `/28` (16 IPs) to `/16` (65,536 IPs).
+  - AWS reserves **5 IPs** per subnet (network address, broadcast address, etc.).
+- Subnets are tied to a **single Availability Zone (AZ)**.
+- **Multiple subnets can exist per AZ**, commonly for separating public/private workloads.
+
+**VPC Router**
+- The **VPC Router** is an implicit, AWS-managed component.
+- It routes traffic **within the VPC and to external targets** based on route tables.
+- Operates at **Layer 3 (Network Layer)**.
+- You **cannot configure it directly** — behavior is controlled by **route tables**.
+- VPC Router supports routing to:
+  - `local` (default within VPC)
+  - Internet Gateway (IGW)
+  - NAT Gateway / NAT Instance
+  - Virtual Private Gateway (VGW)
+  - Transit Gateway (TGW)
+  - VPC Peering
+  - Gateway Load Balancer (GWLB)
+
+**Route Tables**
+- **Route Table** defines how traffic is directed within a VPC.
+- Every subnet must be associated with exactly **one** route table.
+- One route table is the **main** route table by default.
+
+| Destination     | Target Example               | Use Case                           |
+|-----------------|------------------------------|-------------------------------------|
+| `local`         | Always present                | Intra-VPC communication             |
+| `0.0.0.0/0`     | IGW or NAT Gateway            | Internet-bound traffic              |
+| Specific CIDRs  | VGW, Peering, TGW             | VPN, Peered VPC, Transit routing    |
+
+- **Custom Route Tables** can be created for:
+  - Public subnets (route to IGW)
+  - Private subnets (route to NAT Gateway)
+  - VPN / TGW connectivity
+    
+- **Routing Logic**:
+  - Longest prefix match wins
+  - Example:
+    - `10.0.0.0/16` → Peering
+    - `10.0.1.0/24` → NAT
+    - Traffic to `10.0.1.5` uses `10.0.1.0/24` route
+
+**Exam Tips**
+- Know when to use:
+  - IGW vs NAT Gateway
+  - Peering vs Transit Gateway
+- Understand route table propagation:
+  - VGW and TGW can **propagate routes** into route tables
+- Isolated subnet = **no route** to IGW or NAT
+- Public subnet = **must have**:
+  - Route to IGW
+  - Public IP / Elastic IP assigned to the instance
+- Multiple subnets can share one route table
+- Route tables apply at **subnet level**, not instance level
 
 **IP Party**
 
