@@ -319,11 +319,119 @@
 - **IP Reputation**: AWS may reject IP ranges with poor reputation.
 
 ### 📖 Elastic Network Interface, Elastic IP and Internet Gateway
+**Elastic Network Interface (ENI)**
+-  *virtual network interface* that can be attached to an EC2 instance within a VPC.
+Key Properties
+- **Primary private IP address** (mandatory)
+- **Secondary private IPs** (optional)
+- **Elastic IP** association (optional)
+- **MAC address**, **Security Groups**, **Source/Dest Check**
+Use Cases
+- High availability (detach/attach to other instances)
+- Multi-homed EC2s (for firewall, proxy, etc.)
+- Failover between instances
+- Network appliances
+
+**Elastic IP (EIP)**
+- A *static public IPv4 address* provided by AWS, used for dynamic remapping of public IPs.
+- Assigned to an **ENI**, not directly to EC2
+- Persistent across stop/start
+- Default **1 EIP/account/region** (increase limit if needed)
+- **Charged** when allocated but **not associated**
+Use Cases
+- Hosting internet-facing services with a static IP
+- Rapid failover to standby instances
+- NAT or bastion hosts
+
+**Internet Gateway (IGW)**
+- A horizontally scaled, redundant VPC component that allows **internet access** to/from the VPC.
+-  **1 IGW per VPC**
+- Supports IPv4
+- **Stateful**: return traffic is allowed
+- For IPv6, use **Egress-only IGW** for outbound-only scenarios
+Requirements for Internet Access
+1. VPC **attached** to an IGW
+2. **Route Table** routes `0.0.0.0/0` to the IGW
+3. **Subnet** must be public (with public IP auto-assigned or EIP)
+4. **Security Group** allows inbound/outbound traffic
+5. **NACLs** allow traffic
 
 ### 📖 Traffic control: Network Access Control Lists and Security Groups
+**Security Groups (SGs)**
+- A **virtual firewall** that controls **inbound and outbound traffic** for AWS resources (mainly EC2 instances).
+- - **Stateful**: Return traffic is automatically allowed
+- Applies at the **instance level**
+- Supports **allow rules only** (no deny)
+- **Inbound:** All traffic **DENIED** by default
+- **Outbound:** All traffic **ALLOWED** by default
+- Rules can be based on:
+  - IP (CIDR)
+  - Protocol (TCP, UDP, ICMP)
+  - Port ranges
+  - **Security Group ID** (for internal reference)
+
+Network Access Control Lists (NACLs)
+- A **subnet-level firewall** that controls **inbound and outbound traffic** for entire subnets.
+- **Stateless**: Return traffic must be explicitly allowed
+- Rule #, Protocol, Port Range, Source/Destination, Action (Allow/Deny)
+- Applies at the **subnet level**
+- Supports both **allow and deny** rules
+- Rules are evaluated in order by **rule number** (lowest first)
+- Default NACL: **Allows all** inbound and outbound traffic
+- Custom NACL: **DENIES all** traffic until you add rules
+Use Cases
+- Add additional security filtering beyond Security Groups
+- Quickly deny traffic from known bad IP ranges
+- Logging and monitoring subnet-level access
+
+| Feature             | Security Group (SG)         | Network ACL (NACL)               |
+|---------------------|-----------------------------|----------------------------------|
+| Scope               | EC2 Instance (ENI)           | Subnet                           |
+| Stateful/Stateless  | **Stateful**                 | **Stateless**                    |
+| Rules Type          | Allow only                   | Allow and Deny                   |
+| Applied To          | ENI of EC2, RDS, ELB, etc.   | Entire Subnet                    |
+| Evaluation Order    | All rules                    | Rule number order (lowest first) |
+| Default Behavior    | Inbound denied, Outbound allowed | All allowed (default NACL)  |
+| Use Cases           | Instance-level access control| Subnet-level control, blacklisting|
+
+**Best Practices**
+- Use **Security Groups** as primary access control.
+- Use **NACLs** for:
+  - Blocking specific IP ranges
+  - Adding additional subnet-level defense
+- Use **logging** (VPC Flow Logs) to audit access behavior.
 
 ### 📖 NAT Gateway
+- A **Network Address Translation (NAT) Gateway** enables **instances in a private subnet** to initiate **outbound** traffic to the internet or other AWS services, but **prevents inbound traffic** from the internet.
+- **Managed by AWS** (scalable and high availability in one AZ)
+- **Outbound only** internet access
+- Uses **Elastic IP**
+- Only works with **IPv4**
+- Must reside in a **public subnet**
+- Highly available within an **Availability Zone (AZ)**
 
+| Feature                 | NAT Gateway             | NAT Instance               |
+|-------------------------|-------------------------|----------------------------|
+| Type                    | Managed service         | EC2 instance               |
+| HA by default           | Yes (per AZ)            | No (must configure manually)|
+| Performance             | Scales automatically    | Manual instance type scaling|
+| Maintenance             | AWS-managed             | User-managed                |
+| Cost                    | More expensive          | Cheaper (for small workloads)|
+| Logging                 | VPC Flow Logs           | Full control (can install tools)|
+
+Setup Requirements
+1. Deploy NAT Gateway in a **public subnet**
+2. Attach an **Elastic IP**
+3. Add a route in the **private subnet's route table**:
+   Destination: 0.0.0.0/0
+   Target: NAT Gateway ID
+5. 4. Ensure security groups/NACLs allow traffic
+  
+Use Cases
+- Private EC2 instances downloading updates or patches
+- Access to external APIs from private apps
+- Accessing S3 or DynamoDB via VPC endpoint alternatives
+  
 ### 📖 VPC Endpoint
 
 ### 📖 VPC Peering
@@ -362,5 +470,6 @@
 # Automate AWS tasks
 
 # Labs
+- [Configure an Amazon EC2 Instance with Dual-Homed Network Connectivity] (https://app.pluralsight.com/hands-on/labs/2c732866-9017-4b5f-bc7b-ee8b6589ef32?ilx=true)
 
       
