@@ -370,7 +370,7 @@ Requirements for Internet Access
   - Port ranges
   - **Security Group ID** (for internal reference)
 
-Network Access Control Lists (NACLs)
+**Network Access Control Lists (NACLs)**
 - A **subnet-level firewall** that controls **inbound and outbound traffic** for entire subnets.
 - **Stateless**: Return traffic must be explicitly allowed
 - Rule #, Protocol, Port Range, Source/Destination, Action (Allow/Deny)
@@ -431,9 +431,72 @@ Use Cases
 - Private EC2 instances downloading updates or patches
 - Access to external APIs from private apps
 - Accessing S3 or DynamoDB via VPC endpoint alternatives
+
+**Private NAT Gateway**
+- A Private NAT Gateway (introduced in 2023) is a fully-managed Network Address Translation (NAT) service that allows private subnets to communicate with other private networks, such as:
+- Other VPCs via VPC Peering or Transit Gateway
+- On-premises networks via VPN or Direct Connect
+- Private AWS services using VPC Endpoints (Interface/PrivateLink)
+Use cases
+- EC2 in private subnet accessing internal microservices in another VPC
+- Hybrid cloud workloads needing access to on-prem apps
+- Multi-tier architecture with separate shared services VPC
+- Workloads with **no internet egress requirement**
+
+| Feature                | Public NAT Gateway | Private NAT Gateway |
+|------------------------|--------------------|----------------------|
+| Internet Access         | ✅ Yes             | ❌ No                |
+| Elastic IP Needed       | ✅ Yes             | ❌ No                |
+| Internet Gateway Needed | ✅ Yes             | ❌ No                |
+| Used for S3 access?     | ✅ Yes (unless using VPC Endpoint) | ❌ Use Gateway Endpoint |
+| Use Case                | Private subnet to Internet | Private subnet to internal services |
+
+**🧠 Exam Tips**
+- Does **not** need IGW or EIP
+- Combine with **Transit Gateway** or **VPC Peering** for cross-VPC
+- For S3/DynamoDB access, use **Gateway VPC Endpoints**
+- Great for **compliance-restricted environments**
+- **Can't replace** public NAT gateway when internet is required
   
 ### 📖 VPC Endpoint
+- A **VPC Endpoint** enables **private connections** between your VPC and AWS services **without using an Internet Gateway, NAT, VPN, or Direct Connect**.
+Use Cases
+- Secure communication with **SSM**, **KMS**, **S3**, or **Secrets Manager**
+- Prevent EC2 instances from accessing AWS services over the public internet
+- Lock down **S3 bucket access** to only within your VPC (via Gateway Endpoint)
+- Access partner services or customer-managed services using PrivateLink
 
+**Interface Endpoint**
+- Powered by **AWS PrivateLink**
+- Uses **Elastic Network Interfaces (ENIs)** with **private IPs** in your VPC
+- Supports most **AWS services** (e.g., SSM, CloudWatch, KMS, API Gateway, etc.)
+- Can also connect to **customer-managed services** and **partner services**
+- Support security group and endpoint policies
+
+**Gateway Endpoint**
+- Only supports **Amazon S3** and **DynamoDB**
+- Targets a **route table**, not an ENI
+- Does **not use IP addresses** (so no ENI or security group)
+- Support resource policies
+
+| Feature                  | Interface Endpoint            | Gateway Endpoint           |
+|--------------------------|-------------------------------|----------------------------|
+| Used For                 | Most AWS services             | Only S3 and DynamoDB       |
+| Networking               | ENI (Elastic Network Interface) | Route Table                |
+| IP Addresses             | ✅ Yes                        | ❌ No                      |
+| Security Group           | ✅ Yes                        | ❌ No                      |
+| PrivateLink              | ✅ Yes                        | ❌ No                      |
+| Supported in Transit GW  | ✅ Yes                        | ❌ No                      |
+| Cost                     | 💰 Charged per hour + GB      | 💸 Free                    |
+
+**🧠 Exam Tips**
+- ❗ **Interface Endpoint = PrivateLink (ENI)** — supports security groups
+- ❗ **Gateway Endpoint = Route Table Only** — supports S3/DynamoDB
+- VPC Endpoints avoid public internet traversal
+- Interface Endpoints can be used with **SSM** to access private EC2
+- Use **VPC Endpoint Policies** to control what services/resources are accessible
+- Combine with **NAT Gateway** carefully — ensure **specific routes** to endpoints override NAT path
+  
 ### 📖 VPC Peering
 
 ### 📖 Jumping into VPCs with Jump Server or Session Manager  
