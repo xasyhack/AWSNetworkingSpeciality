@@ -498,6 +498,74 @@ Use Cases
 - Combine with **NAT Gateway** carefully — ensure **specific routes** to endpoints override NAT path
   
 ### 📖 VPC Peering
+- VPC Peering is a **network connection between two Virtual Private Clouds (VPCs)** that enables you to **route traffic privately** using **private IP addresses** without going through a gateway, VPN, or the internet.
+- **One-to-One** relationship between two VPCs
+- Traffic remains **within the AWS network**
+- Supports **intra-region** and **inter-region** peering
+- **No transitive peering**: You must create individual peering connections for each pair
+- Works across **different AWS accounts** and **different regions**
+Use Cases
+- Access resources like **EC2, RDS, Lambda** across VPCs
+- Enable communication between **different business units or teams**
+- Connect **production** and **development** environments securely
+How it works
+1. VPC A initiates a **peering request** to VPC B
+2. VPC B **accepts** the request
+3. Update **route tables** in both VPCs to allow traffic
+4. Adjust **security groups** and **NACLs** if necessary
+
+Important Considerations
+| Limitation           | Description                                                                      |
+|----------------------|----------------------------------------------------------------------------------|
+| ❌ Transitive Routing | No — cannot route traffic from VPC A → VPC B → VPC C                             |
+| ❌ Overlapping CIDRs | VPCs must have **non-overlapping CIDR blocks**                                  |
+| ⚠️ Route Tables       | Must manually add routes to each subnet in both VPCs                            |
+| 🔐 IAM Controls       | Peering request/acceptance can be controlled with IAM policies                  |
+
+  
+| Feature              | VPC Endpoint                                                                 | VPC Peering                                                |
+|----------------------|------------------------------------------------------------------------------|-------------------------------------------------------------|
+| **Purpose**           | Connect to AWS services (S3, DynamoDB) or PrivateLink services privately | Establish **private connectivity** between two VPCs         |
+| **Types**             | - Interface Endpoint (ENI)<br>- Gateway Endpoint (S3, DynamoDB only)         | Peering connection (only one type)                          |
+| **Scope**             | Service-level access                                                         | VPC-to-VPC communication                                    |
+| **Cross-Region**      | ✅ (Interface Endpoint supports it)                                          | ✅ Supported                                                |
+| **Use Case**          | Access AWS services or SaaS without NAT/IGW and public IP                    | Share resources (EC2, RDS, etc.) between VPCs, Works across accounts and regions  |
+| **Cost**              | Charged per hour + data transfer                                             | Data transfer charges (intra-region is cheaper)            |
+| **Route Table**       | - Gateway Endpoint: Route table<br>- Interface: SG & DNS                     | Route table updates in both VPCs required                   |
+| **Scalability**       | Scales via PrivateLink and multiple endpoints                               | Limited by number of peering connections per VPC            |
+
+CLI Command
+```bash
+# Create peering connection
+aws ec2 create-vpc-peering-connection \
+  --vpc-id vpc-11111111 \
+  --peer-vpc-id vpc-22222222
+
+# Accept peering request
+aws ec2 accept-vpc-peering-connection \
+  --vpc-peering-connection-id pcx-abc123
+
+# Add route to route table
+aws ec2 create-route \
+  --route-table-id rtb-12345678 \
+  --destination-cidr-block 10.2.0.0/16 \
+  --vpc-peering-connection-id pcx-abc123
+```
+
+**🧠 Exam Tips**
+- **VPC Endpoint** = Private access to **services**
+- **VPC Peering** = Private access to **resources in other VPCs**
+- **No transitive routing** in either!
+- **VPC Peering is regional by default** but can be extended **inter-region**
+- **No DNS resolution by default** across peered VPCs (unless enabled)
+  - Use `enableDnsResolutionFromRemoteVpc` & `enableDnsHostnames`
+- **No transitive routing or edge-to-edge routing**
+- **Security groups and NACLs must be updated** to allow traffic
+- **Peering is not the best fit** for complex or large-scale mesh networks — consider **Transit Gateway**
+
+
+
+
 
 ### 📖 Jumping into VPCs with Jump Server or Session Manager  
 
