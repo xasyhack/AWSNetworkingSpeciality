@@ -563,15 +563,53 @@ aws ec2 create-route \
 - **Security groups and NACLs must be updated** to allow traffic
 - **Peering is not the best fit** for complex or large-scale mesh networks — consider **Transit Gateway**
 
-
-
-
-
 ### 📖 Jumping into VPCs with Jump Server or Session Manager  
+- A **Bastion Host** is a jump box EC2 instance placed in a **public subnet** that acts as a gateway for admins to SSH into **private EC2 instances**.
+- **Session Manager** is part of **AWS Systems Manager (SSM)** that allows secure, auditable access to EC2 instances **without SSH or bastion hosts**.
+EC2 must have:
+  - **SSM Agent installed**
+  - **IAM role** with `AmazonSSMManagedInstanceCore` policy
+  - **SSM endpoint** in private subnet (for no-internet access)
+- VPC endpoints required for private-only SSM access
+  - com.amazonaws.<region>.ssm
+  - com.amazonaws.<region>.ec2messages
+  - com.amazonaws.<region>.ssmmessages
+
+| Feature                | Bastion Host                                | Session Manager (SSM)                         |
+|------------------------|----------------------------------------------|-----------------------------------------------|
+| Setup                  | EC2 instance in public subnet                | No EC2 needed                                 |
+| Access Type            | SSH (port 22)                                | Secure browser/CLI access                     |
+| Security Group         | Needs inbound SSH from your IP               | No inbound rules needed                       |
+| IAM Requirement        | Optional                                     | Mandatory (SSM permissions)                   |
+| Auditability           | Limited (CloudTrail logs only)               | Full logging to CloudWatch or S3              |
+| Cost                   | EC2 cost + EIP (if used)                     | No extra EC2 cost                             |
+| MFA                    | Not native                                   | Supported                                     |
+| Network Dependency     | Requires internet/NAT to access private EC2  | Works in private subnet (SSM Agent + VPC endpoints) |
+| Use Case               | Legacy SSH access                            | Secure, modern access without SSH             |
 
 ### 📖 Consideration for IPv6 in AWS VPC
+VPC
+- You can assign an **IPv6 CIDR block** when creating a VPC.
+- Example: `/56` block allocated from Amazon pool.
+- You can associate `/64` blocks to subnets.
+Subnet
+- **Dual-stack**: Can have both IPv4 and IPv6.
+- Every subnet must have **separate routing** for IPv6.
+Internet access
+- IPv6 traffic uses **Internet Gateway** (IGW) directly, **no NAT required**.
+- Add **route for `::/0`** to IGW for outbound IPv6.
 
 ### 📖 Reachabiliyt Analyzer
+- Reachability Analyzer is an **automated network path tracing tool** that analyzes and **validates network paths** between two AWS resources **within a VPC or across VPCs (peered)**.
+How It Works
+1. You define a **source** and **destination** (EC2, ENI, Lambda, etc.).
+2. The tool checks:
+   - Route Tables
+   - Security Groups
+   - NACLs
+   - Internet Gateway (IGW), NAT Gateway, Transit Gateway
+   - VPC Peering / VPN / Direct Connect
+3. Generates a **graphical and textual report** showing if the path is reachable or not.
 
 ### 📖 VPC Flow Logs
 
@@ -579,26 +617,7 @@ aws ec2 create-route \
 
 ### 📖 Managing Global Network with AWS Cloud WAN
 
-
-**AWS Global Infrastructure**
-
-**Private and Public AWS Services**
-
-**Disaster Recovery and High Availability**
-
-**VPC Basic Networking Design**
-
-# Configure Network Integration with Application Services
-
-# Hybrid Networking Basis and VPNs
-
-# AWS Direct Connect and Hybrid DNS
-
-# Transitive Networking 
-
-# Security and Compliance
-
-# Automate AWS tasks
+## Configure Network Integration wit Application Services
 
 # Labs
 - [Configure an Amazon EC2 Instance with Dual-Homed Network Connectivity] (https://app.pluralsight.com/hands-on/labs/2c732866-9017-4b5f-bc7b-ee8b6589ef32?ilx=true)
