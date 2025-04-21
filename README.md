@@ -98,10 +98,32 @@
   - **VPC Flow Logs**
   - **Reachability Analyzer**
   - **CloudWatch**
+ 
+📝 Exam sample
+You are designing a global application with latency-sensitive users in Europe, Asia, and North America.  
+Your application needs to ensure:
+- Low-latency user access
+- Highly available endpoints
+- Automatic routing to healthy regions if one fails
+Which **AWS global infrastructure features** should you use to meet the above requirements?
+- **Amazon CloudFront** for caching content at edge locations
+- **AWS Global Accelerator** for low-latency routing to regional endpoints
+- **Route 53 with health checks** for DNS-based failover
+- **Deploy resources in multiple AWS Regions** for high availability
 
 ### 📖 Private and Public AWS Services
 - Public AWS Services: Services accessed over the public internet (Without VPC). E.g S3, Lambda, SNS/SQS, DynamoDB, API Gateway, CloudFront. Secure via IAM policies, VPC endpoints, WAF or CloudFront.
 - Private AWS Services: Services not exposed to the public internet (contained within your VPC); require private IP address to access. E.g EC2, RDS, ElastiCache, EFS, PrivateLink . Secure via security groups, network ACLs, Route tables
+
+📝 Exam sample
+Your company runs an internal application hosted on **EC2 instances in private subnets**.  
+The app needs to:
+- Access **Amazon S3** to retrieve files
+- Access **Amazon DynamoDB** for metadata lookup
+- Maintain strict compliance by ensuring **no internet access** is allowed
+As the network engineer, which solution should you implement to meet these requirements **without using a NAT Gateway or Internet Gateway**?
+- **Create a VPC Gateway Endpoint** for S3 and DynamoDB
+- Gateway Endpoints enable **private, secure** access to supported services without routing through the internet.
 
 ### 📖 Disaster Recovery and High Availability
 | Aspect              | High Availability (HA)                         | Fault Tolerance (FT)                             |
@@ -112,6 +134,24 @@
 | Recovery            | May require **failover** or **restart**       | No recovery needed; system runs **seamlessly**   |
 | Cost                | Lower cost than FT                            | Higher cost due to **redundancy**                |
 | Example             | Active-Passive Load Balancer                  | RAID 1, EC2 with auto-recovery, redundant power  |
+
+📝 Exam sample
+A financial services company runs a **mission-critical payment processing application** in **us-east-1**, with strict SLA requirements.
+The architecture must:
+- Be **highly available**
+- **Recover within minutes** in case of a regional failure
+- Avoid **data loss**
+- Minimize **operational overhead**
+
+Which design should you implement?
+- **Active-Active Multi-Region deployment**
+- Use **Route 53 with latency-based routing + health checks**
+- Use **Amazon Aurora Global Database** or **cross-region RDS read replicas**
+- Use **S3 Cross-Region Replication** for object durability
+- Use **Global DynamoDB tables** (if applicable)
+- Move to **Multi-AZ deployment**
+- Place EC2s behind **ALB** across multiple AZs
+- Enable **RDS Multi-AZ**
 
 ### 📖 VPC Basic Networking Design
 **What Is a VPC?**
@@ -203,6 +243,74 @@
 - Hybrid Networking
   - Understand how VPC connects to on-prem via **Site-to-Site VPN** or **Direct Connect**.
   - Know HA configurations: multiple tunnels, BGP, VGW.
+ 
+📝 Exam sample
+You are designing a VPC for a new 3-tier web application in the **us-west-2** region.  
+The application requires:
+- Public access to the frontend
+- Secure backend services not exposed to the internet
+- Access to AWS services like S3 without traversing the internet
+- Centralized logging to a third-party provider
+Correct Design:
+- Create a **VPC** with 6 subnets across **2 AZs**:
+  - **2 Public Subnets** for ALB and NAT Gateway
+  - **2 Private Subnets** for app servers
+  - **2 Private Isolated Subnets** for databases
+- Use **Internet Gateway** for public access
+- Attach **NAT Gateway** in public subnets for private subnet internet access (outbound only)
+- Use **VPC Gateway Endpoints** for S3 and DynamoDB
+- Use **Interface Endpoint (PrivateLink)** for access to third-party logging SaaS securely
+
+| Problem                                    | Solution                                     |
+|--------------------------------------------|----------------------------------------------|
+| S3 access without NAT Gateway              | Use **Gateway Endpoint**                     |
+| Secure API access to third-party service   | Use **Interface Endpoint (PrivateLink)**     |
+| Cost-optimized architecture                | Use **1 NAT GW per AZ** (avoid cross-AZ data)|
+| Resiliency                                 | Deploy subnets across **multiple AZs**       |
+
+Your organization uses a multi-account AWS setup with **AWS Organizations**.  
+You are tasked with designing a **shared network** architecture across accounts.
+Requirements:
+- Use a central VPC in a **Network Account**
+- Application workloads are deployed in **Spoke Accounts**
+- All accounts should access:
+  - **Shared Services (e.g., Active Directory, logging)**
+  - **Internet access** via NAT
+  - **S3 and DynamoDB** without internet traffic
+- All subnets must support **/20 level scalability**
+
+1. **CIDR Planning**:
+- Assign a large supernet to central VPC: `10.0.0.0/16`
+- Divide into subnet blocks per AZ:
+  - AZ1 Public: `10.0.0.0/20`
+  - AZ1 Private: `10.0.16.0/20`
+  - AZ1 Isolated: `10.0.32.0/20`
+  - AZ2 Public: `10.0.48.0/20`
+  - AZ2 Private: `10.0.64.0/20`
+  - AZ2 Isolated: `10.0.80.0/20`
+
+2. Networking Setup
+- Enable **VPC Sharing** using AWS RAM (Resource Access Manager)
+- Share subnets with Spoke Accounts
+- Set up **VPC Peering or Transit Gateway** for centralized routing
+- Use **VPC Endpoints** for S3/DynamoDB (Gateway Endpoints)
+- Deploy **NAT Gateways** in public subnets of the network account
+
+3. Routing Logic
+| Route Table        | Destination           | Target                      |
+|--------------------|-----------------------|-----------------------------|
+| Private Subnet     | `0.0.0.0/0`           | NAT Gateway in public subnet|
+| Public Subnet      | `0.0.0.0/0`           | Internet Gateway            |
+| Isolated Subnet    | No internet routes    | None                        |
+| All Subnets        | `10.0.0.0/16`         | Local                       |
+
+Connectivity Features
+| Feature                        | Used For                                      |
+|-------------------------------|-----------------------------------------------|
+| **Transit Gateway**           | Multi-account VPC mesh                        |
+| **VPC Sharing**               | Centralized VPC infra                         |
+| **PrivateLink Interface EPs** | Shared service access (e.g. AD, logging)      |
+| **Gateway Endpoints**         | Private access to S3 & DynamoDB               |
 
 ### 📖 Default VPC
 - Automatically created by AWS in each region (per account).
@@ -216,6 +324,19 @@
 | Security Group         | Default SG allows all outbound, no inbound     |
 | CIDR Range             | `172.31.0.0/16`                                |
 | Auto-assign Public IP  | Enabled by default                             |
+
+📝 Exam sample
+A developer launches an EC2 instance using the AWS Management Console without specifying any networking configurations.They expect the instance to be accessible via SSH from their corporate IP. However, they are unable to connect.
+Setup Details:
+- Region: `us-east-1`
+- VPC: Default VPC is used automatically
+- Subnet: Default public subnet
+- Instance: Amazon Linux EC2 with public IP assigned
+- Security Group: Default security group
+- Route Table: Subnet route table includes `0.0.0.0/0 → IGW`
+Problem:
+- The issue is with the **default security group**, which **only allows inbound traffic from itself** (`source: sg-xxxxxx`).  
+- It does **not allow inbound SSH** from external IPs. Security groups need to be **modified manually** to allow external access
 
 ### 📖 Subnets, VPC Routers, and Route tables
 **Subnets**
@@ -282,6 +403,35 @@
 - Multiple subnets can share one route table
 - Route tables apply at **subnet level**, not instance level
 
+📝 Exam sample
+You are designing a VPC with the following requirements:
+- Application Load Balancer (ALB) must serve internet-facing traffic.
+- Web servers must be deployed in private subnets and access external APIs on the internet.
+- Database servers must not have any internet access.
+- The architecture must span **2 Availability Zones (AZs)**.
+What should the design look like?
+Subnets:
+- **Public Subnets** (1 per AZ):
+  - For ALB + NAT Gateway
+- **Private Subnets** (1 per AZ):
+  - For EC2 web servers (outbound internet via NAT)
+- **Isolated Subnets** (1 per AZ):
+  - For RDS or database servers (no internet access)
+Route Tables:
+| Subnet Type     | Route Table Rules                                 |
+|------------------|---------------------------------------------------|
+| Public Subnet    | `0.0.0.0/0 → Internet Gateway`                    |
+| Private Subnet   | `0.0.0.0/0 → NAT Gateway (in Public Subnet)`      |
+| Isolated Subnet  | No route to `0.0.0.0/0`      
+VPC Router:
+- Implicitly handles local routing: `10.0.0.0/16 → local`
+- Managed by AWS – no config required by user
+- Used to route between subnets within a VPC
+
+Your EC2 instance in a private subnet can't reach the internet. You've configured the route table to point `0.0.0.0/0 → IGW`. What's wrong?
+- Use **NAT Gateway** in **public subnet**
+- Modify private subnet route table: `0.0.0.0/0 → NAT Gateway`
+
 ### 📖 IP Party: BYOIP
 - **Bring Your Own IP (BYOIP)** allows you to bring your **public IPv4 or IPv6 address ranges** to AWS.
 - AWS advertises these IPs on your behalf, enabling you to:
@@ -317,6 +467,39 @@
 - **Elastic IPs** from BYOIP pools can be used with services like **EC2**, **NAT Gateway**, and **NLB**.
 - **Global Accelerator** supports BYOIP for consistent IP addresses across regions.
 - **IP Reputation**: AWS may reject IP ranges with poor reputation.
+
+📝 Exam sample
+Your organization owns a block of public IP addresses that it wants to use within AWS for branding consistency and allowlisting on external partners' firewalls.
+You are asked to make this block usable across **Elastic Load Balancers**, **CloudFront**, and **EC2 Elastic IPs**, with minimal downtime.
+Setup Details:
+- IP Range: `198.51.100.0/24` (Owned by your org, registered with RIR like ARIN)
+- Services: Use with **EC2, CloudFront, ALB, and Global Accelerator**
+- Region: Multi-region deployment (e.g., `us-east-1`, `eu-west-1`)
+- Requirements:
+  - Low-latency global content delivery
+  - Use existing public IPs to avoid partner allowlist updates
+Which steps are needed to allow use of the IPs in AWS services while ensuring high availability and global performance?
+1. **Verify IP Ownership:**
+   - Submit ownership proof via **AWS Support Center**
+   - Must be an IP range from a RIR (ARIN, RIPE, etc.)
+2. **Bring Your IP Range (BYOIP):**
+   - Use **EC2 → IP Address Manager (IPAM)** or CLI:
+     ```bash
+     aws ec2 provision-byoip-cidr \
+       --cidr 198.51.100.0/24 \
+       --publicly-advertisable \
+       --description "Our corp range"
+     ```
+3. **Advertise the range:**
+   - After approval, use:
+     ```bash
+     aws ec2 advertise-byoip-cidr --cidr 198.51.100.0/24
+     ```
+4. **Allocate Elastic IPs from the range:**
+   - These can now be attached to EC2 instances, ALBs, and Global Accelerator
+5. **Use with Global Services:**
+   - Assign to **Global Accelerator** for low-latency routing
+   - Use for **CloudFront origins** or **custom ALB DNS**
 
 ### 📖 Elastic Network Interface, Elastic IP and Internet Gateway
 **Elastic Network Interface (ENI)**
