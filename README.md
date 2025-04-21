@@ -660,8 +660,64 @@ Limitations
 - For VPC Peering: Flow Logs must be enabled in **both VPCs** to monitor cross-VPC traffic.
 - Use in combo with **Reachability Analyzer** for path + visibility insights.
 
-
 ### 📖 Network Performance
+Enhanced Networking (ENA & Intel VF)
+- **ENA (Elastic Network Adapter)**:
+  - Used by default for most **Nitro-based instances**.
+  - Up to **100 Gbps** throughput.
+  - Low CPU overhead and low latency.
+  - Use ENA for performance-sensitive workloads.
+
+- **Intel 82599 VF** (older):
+  - Up to **10 Gbps** throughput.
+  - Less common in new instance types.
+
+Placement Groups
+**Cluster** → Max performance, **Partition** → Isolation + scaling, **Spread** → Fault tolerance.
+| Type              | Best For                           | Description |
+|-------------------|-------------------------------------|-------------|
+| Cluster           | **Low-latency, high throughput** between instances | Same AZ, same rack |
+| Partition         | **Large distributed workloads** like HDFS, Kafka | Spread across partitions |
+| Spread            | **Critical, isolated instances** | Spread across hardware racks and AZs |
+
+Elastic Fabric Adapter (EFA)
+- **Best for tightly-coupled HPC** (e.g., MPI apps).
+- Provides **OS-bypass** for ultra-low latency.
+- Only supported in **specific EC2 instances**.
+
+MTU and Jumbo Frames
+**Enable jumbo frames** in large payload or HPC scenarios.
+- Standard MTU: **1500 bytes**
+- Jumbo MTU: **9001 bytes**
+  - Supported within same VPC, Direct Connect, VPN
+- Helps reduce CPU overhead in large data transfers
+
+Throughput Optimization Tips
+| Strategy                            | Notes                                      |
+|-------------------------------------|--------------------------------------------|
+| Choose instance with high ENI limit | More bandwidth and connections             |
+| Use NLB instead of ALB              | NLB is layer 4 and faster for raw traffic  |
+| Use Gateway Load Balancer for appliances | Maintains performance and simplifies routing |
+| Use S3 Transfer Acceleration        | Boosts S3 upload/download globally         |
+| Enable HTTP keep-alive              | Avoids connection reestablishment latency  |
+
+Cross-Region Performance
+- Use **Global Accelerator**:
+  - Routes users to optimal endpoints
+  - Leverages AWS global backbone
+- Use **S3 Transfer Acceleration**:
+  - Speeds up cross-continent uploads
+
+High Availability Design
+- Use **multi-AZ deployments**
+- Use **Route 53 health checks** and failover routing
+- Use **NAT Gateway** across multiple AZs
+
+🧠 Pro Tips for Exam
+- ENA is default in modern EC2 → no config needed
+- Use **monitoring tools** like **CloudWatch + VPC Flow Logs** to verify performance
+- Use **Performance Insights** for RDS or **CloudWatch metrics** for EC2/EBS/ENI
+- Understand **packet per second (PPS)** vs **bandwidth (Gbps)** needs
 
 ### 📖 Managing Global Network with AWS Cloud WAN
 
