@@ -612,6 +612,54 @@ How It Works
 3. Generates a **graphical and textual report** showing if the path is reachable or not.
 
 ### 📖 VPC Flow Logs
+- **VPC Flow Logs** capture **IP traffic metadata** flowing to and from network interfaces (ENIs) in a VPC.
+
+Where Can Flow Logs Be Created?
+| Level           | Scope                                |
+|-----------------|---------------------------------------|
+| VPC             | Logs for all ENIs in the VPC          |
+| Subnet          | Logs for all ENIs in the subnet       |
+| Network Interface (ENI) | Logs for individual ENIs        |
+
+Configuration Output Options
+| Destination          | Notes                                                  |
+|----------------------|--------------------------------------------------------|
+| Amazon CloudWatch Logs | Near real-time log stream, searchable via Insights     |
+| Amazon S3             | Cost-effective long-term storage, use Athena for query |
+| Amazon Kinesis Data Firehose | For custom analytics or streaming destinations |
+
+Log Format
+- version account-id interface-id srcaddr dstaddr srcport dstport protocol packets bytes start end action log-status
+2 123456789012 eni-abcde123 10.0.0.1 10.0.0.2 443 49152 6 10 840 1609459200 1609459260 ACCEPT OK
+- Log Status Values
+| Value    | Meaning                                                            |
+|----------|--------------------------------------------------------------------|
+| OK       | Traffic recorded successfully                                     |
+| NODATA   | No traffic during the aggregation interval                        |
+| SKIP     | Logs skipped (e.g., internal error or unsupported traffic type)    |
+
+Security & IAM Permissions
+- `ec2:CreateFlowLogs`
+- `logs:CreateLogGroup`
+- `logs:CreateLogStream`
+- `logs:PutLogEvents`
+- `s3:PutObject` (if using S3)
+  
+Limitations
+- Flow Logs do **not capture**:
+  - DNS traffic (use Route 53 logs instead)
+  - Windows license activation traffic
+  - Traffic to Amazon metadata (`169.254.169.254`)
+  - ARP or DHCP packets
+- Cannot change aggregation interval (1min default)
+
+🧠 Pro Exam Tips
+- Flow logs **only capture metadata**, not packet payloads.
+- Always check IAM permissions if logs are not delivered.
+- Use **Athena on S3 logs** for efficient, serverless querying.
+- For VPC Peering: Flow Logs must be enabled in **both VPCs** to monitor cross-VPC traffic.
+- Use in combo with **Reachability Analyzer** for path + visibility insights.
+
 
 ### 📖 Network Performance
 
