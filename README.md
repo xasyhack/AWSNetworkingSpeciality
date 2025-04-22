@@ -903,6 +903,25 @@ High Availability Design
 - Understand **packet per second (PPS)** vs **bandwidth (Gbps)** needs
 
 ### 📖 Managing Global Network with AWS Cloud WAN
+- **AWS Cloud WAN** is a managed wide-area networking (WAN) service that helps you build, manage, and monitor a **global network** using **AWS backbone** across multiple Regions and on-premises locations.
+- Cloud WAN centralizes network control using **Core Network Policies**, replacing the need for complex manual configuration using Transit Gateways (TGWs), VPNs, and VPC peering.
+
+Lifecycle Flow
+1. Create a **Global Network** (one per Org)
+2. Define a **Core Network** (name, ASN)
+3. Define **Network Segments** (prod, dev, etc.)
+4. Create a **Core Network Policy**
+5. Attach **VPCs, TGWs, VPNs** to **CNEs**
+6. Define **Route tables and propagation rules**
+7. Monitor via **AWS Network Manager**
+
+| Term                  | Description                                                                 |
+|-----------------------|-----------------------------------------------------------------------------|
+| **Core Network**      | The global network managed by Cloud WAN                                     |
+| **Network Segments**  | Like VRFs – isolated routing domains (e.g., prod, dev, shared)              |
+| **Core Network Edge (CNE)** | Regional attachment point for VPCs, VPNs, TGWs                        |
+| **Policy Document**   | JSON-based config file that defines attachments, routing, segments          |
+| **Attachment**        | Connection between VPC/TGW and Core Network                                 |
 
 ## Configure Network Integration wit Application Services
 
