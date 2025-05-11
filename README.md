@@ -949,16 +949,6 @@ Lifecycle Flow
 | **Outbound Endpoint**  | AWS → On-prem DNS resolution                                                |
 | **Rules**              | Forward specific domains to custom DNS resolvers (e.g., `corp.example.com`) |
 
-**Routing Policy Use Cases**
-| Policy Type         | Use Case Example                                                |
-|---------------------|------------------------------------------------------------------|
-| **Simple**          | Single resource per domain                                       |
-| **Weighted**        | Blue/Green deployments, A/B testing                              |
-| **Latency**         | Global applications – route to region with lowest latency        |
-| **Failover**        | DR setup – route to healthy resource                            |
-| **Geolocation**     | Route based on user’s location                                   |
-| **Multivalue**      | Acts like Round Robin + Health Checks                            |
-
 **Integration Scenarios**
 | Scenario                              | Solution                                                                 |
 |---------------------------------------|--------------------------------------------------------------------------|
@@ -974,13 +964,276 @@ Your company has a hybrid architecture. You want DNS resolution for `internal.co
 - Use Private Hosted Zones for AWS-internal domains
   
 ### 📖 Route 53 hosted Zones, zone records, subdomain delegation, routing policies, health checks, private hosted zones
+- A **Hosted Zone** is a container for DNS records for a specific domain (e.g., `example.com`).
+- You must **register a domain** or create a hosted zone manually.
+- A **domain can have multiple hosted zones** (public and private).
+- **You can’t use CNAME at zone apex** — use **ALIAS** instead
+  
+**Hosted zones**
+| Type               | Purpose                                                         |
+|--------------------|------------------------------------------------------------------|
+| **Public Hosted Zone**  | Manages DNS for internet-facing domains                      |
+| **Private Hosted Zone (PHZ)** | DNS for internal VPC communication                    |
 
+**Private Hosted Zones (PHZ)**
+- Ensure **VPCs are explicitly associated** with the PHZ, or they won’t be able to resolve the internal DNS records.
+| Feature              | Description                                                   |
+|----------------------|---------------------------------------------------------------|
+| Scope                | DNS resolution **within one or more associated VPCs**         |
+| Use case             | Internal services (e.g., `internal.example.com`)              |
+| Security             | Not resolvable over the public internet                       |
+| Cross-VPC support    | Can associate with multiple VPCs in the same or different accounts (via Resource Access Manager - RAM)  |
+| Hybrid support       | Combine with **Route 53 Resolver Inbound Endpoints** to enable on-prem queries to PHZ  |
+
+**DNS Resolver Integration (Hybrid)**
+| Component             | Function                                                          |
+|-----------------------|-------------------------------------------------------------------|
+| **Inbound Endpoint**  | For **on-prem to AWS** DNS resolution (e.g., to PHZ)              |
+| **Outbound Endpoint** | For **AWS to on-prem** resolution                                 |
+| **Resolver Rules**    | Forward specific domains (e.g., `corp.local`) to custom resolvers |
+
+**DNS Record Types**
+- ALIAS records allow pointing root domain (`example.com`) to AWS services (e.g., ELB, CloudFront, S3) without violating DNS rules
+| Record Type | Purpose                                        |
+|-------------|------------------------------------------------|
+| A           | IPv4 address of a domain                       |
+| AAAA        | IPv6 address                                   |
+| CNAME       | Alias to another domain name                   |
+| MX          | Mail exchange server                           |
+| NS          | Delegates a subdomain to another name server   |
+| TXT         | Holds arbitrary text (SPF, DKIM, etc.)         |
+| ALIAS       | AWS-specific: behaves like CNAME but at zone apex |
+
+**Subdomain Delegation**
+- **Goal**: Let another team or account manage a subdomain (e.g., `dev.example.com`)
+1. Create a **hosted zone** for `dev.example.com`
+2. Route 53 auto-generates **NS records** (name servers) for the subdomain
+3. In the **parent zone (`example.com`)**, add an **NS record** for `dev.example.com` pointing to the subdomain's name servers
+
+**Routing Policies**
+| Policy Type         | Use Case                                                       |
+|---------------------|----------------------------------------------------------------|
+| **Simple**          | One record, no logic                                           |
+| **Weighted**        | A/B testing, blue/green deployment                             |
+| **Latency-based**   | Route users to region with lowest latency                      |
+| **Failover**        | Route to primary unless health check fails                     |
+| **Geolocation**     | Based on user’s geographic location                            |
+| **Geoproximity (traffic flow)** | Route based on user’s location + bias setting                 |
+| **Multivalue**      | Round robin with optional health checks                        |
+
+**Health Checks**
+| Feature               | Description                                                   |
+|------------------------|--------------------------------------------------------------|
+| Endpoint monitoring    | HTTP, HTTPS, TCP                                              |
+| String matching        | Check for specific response in body                          |
+| Alarm integration      | Integrates with CloudWatch Alarms                            |
+| DNS failover support   | Marks record as unhealthy to trigger routing change          |
+| **Calculated health check** | Combines multiple health checks into a single status          |
+
+📝 Exam sample
+You need to allow an on-prem data center to resolve internal AWS hostnames in a private VPC. What should you configure?
+- Set up a **Route 53 Private Hosted Zone** for internal domains
+- Deploy **Route 53 Resolver Inbound Endpoint** in the VPC
+- Point on-prem DNS servers to the inbound endpoint IPs
+  
 ### 📖 Elastic Load Balancer, target groups, application load balancer, network load balancer, classic load balancer, gateway load balancer
+- Elastic Load Balancing automatically distributes incoming application traffic across multiple targets such as EC2 instances, containers, and IP addresses within one or more AZs.
+
+| Load Balancer Type         | Layer      | Use Case                                  |
+|----------------------------|------------|--------------------------------------------|
+| **Application LB (ALB)**   | Layer 7    | HTTP/HTTPS-based, content-aware routing    |
+| **Network LB (NLB)**       | Layer 4    | High performance, TCP/UDP load balancing   |
+| **Gateway LB (GWLB)**      | Layer 3/7  | Deploy 3rd-party virtual appliances (e.g., firewalls) |
+| **Classic LB (CLB)**       | Layer 4/7  | Legacy support, avoid in new architectures |
+
+**Target Groups**
+- Target Groups define the destinations for requests routed by ALBs, NLBs, and GWLBs.
+- Each TG includes:
+ - Protocol (HTTP, HTTPS, TCP, UDP, TLS, GENEVE)
+ - Port
+ - Health check config
+| Target Type    | Supported by                 | Notes                                          |
+|----------------|------------------------------|------------------------------------------------|
+| Instance       | ALB, NLB                     | Targets are EC2 instances                      |
+| IP             | ALB, NLB                     | Targets can be IP addresses (in or outside VPC)|
+| Lambda         | ALB only                     | Direct ALB to Lambda functions (event trigger)|
+| Appliance Mode | GWLB only                    | Targets 3rd-party virtual appliances           |
+
+**Application Load Balancer (ALB)**
+- **Layer 7** (HTTP/HTTPS)
+- Content-based routing (host/path/header/method/query-string)
+- Supports **WebSockets** and **HTTP/2**
+- **Advanced features**:
+  - Authentication via Cognito or OIDC
+  - Redirects, fixed responses
+  - **WAF Integration**
+- IP address targeting (IPv4 only)
+- **Zonal DNS names** (for multi-zone routing)
+- Use Cases:
+ - Microservices-based apps
+ - Container-based apps on ECS/EKS
+ - Host-based routing (`api.example.com`, `app.example.com`)
+ - Path-based routing (`/api`, `/admin`)
+
+**Network Load Balancer (NLB)**
+- **Layer 4** (TCP, UDP, TLS)
+- Handles **millions of requests per second**
+- Static IP and **Elastic IP support**
+- Supports TLS termination and SNI
+- Cross-zone load balancing is optional (off by default)
+- Preserves **source IP** (ideal for security tools)
+- use cases:
+ - Low latency & high throughput applications (e.g., gaming, IoT, real-time streaming)
+ - Lift-and-shift of on-prem TCP workloads
+ - When source IP is needed for security
+
+**Gateway Load Balancer (GWLB)**
+- **Layer 3/7 hybrid**
+- Uses **GENEVE tunneling** to redirect traffic to security appliances (IDS/IPS, firewall)
+- Provides scale-out, load balancing, and failover for virtual appliances
+- Requires:
+  - **GWLB Endpoint** in consumer VPC
+  - **GWLB Target Group** in appliance VPC
+- use cases:
+ - Centralized network inspection
+ - Transparent insertion of 3rd-party firewalls
+ - Service chaining in inspection VPC
+
+**Classic Load Balancer (CLB) - (Legacy)**
+- **Layer 4 or 7**, supports HTTP, HTTPS, TCP, SSL
+- No content-based routing
+- No support for advanced routing or containers
+- Cannot register IPs or Lambda
+- Being phased out – **prefer ALB/NLB**
+
+| Feature                    | ALB         | NLB         | GWLB        | CLB         |
+|----------------------------|-------------|-------------|-------------|-------------|
+| OSI Layer                  | 7           | 4           | 3 (GENEVE)  | 4/7         |
+| Use Case                   | Web apps    | TCP/UDP     | Sec tools   | Legacy      |
+| Path-based routing         | ✅          | ❌          | ❌          | ❌          |
+| Host-based routing         | ✅          | ❌          | ❌          | ❌          |
+| TLS termination            | ✅          | ✅          | ❌          | ✅          |
+| Static IP support          | ❌          | ✅          | ✅          | ❌          |
+| WAF integration            | ✅          | ❌          | ❌          | ❌          |
+| Health Checks              | HTTP        | TCP/HTTP    | HTTP        | HTTP/TCP    |
+
+🧠 Pro Tips for Exam
+- ✅ ALB is the only one supporting **OIDC authentication**
+- ✅ GWLB requires **GENEVE-capable appliance**
+- ✅ ALB/NLB support **IP targets**, CLB does not
+- ❌ You cannot attach **WAF** to NLB or GWLB
+- ✅ NLB supports **TLS Listener + SNI**
+- ✅ Use **NLB** for preserving client IP and ultra-low latency
+- ✅ Use **GWLB** to integrate with 3rd-party security solutions
+
+📝 Exam sample
+You need to deploy a scalable inspection layer for east-west traffic using 3rd-party firewalls, while minimizing network architecture complexity.
+**Answer:** Use **Gateway Load Balancer** with a **target group** of security appliances and **GWLB endpoints** in inspected VPCs.
 
 ### 📖 VPC Endpoint Services
+- A **VPC endpoint** enables private connectivity between your VPC and supported AWS services or endpoint services powered by **PrivateLink**, without traversing the public internet or using NAT/GW/VPN.
+- **PrivateLink** leverages **Interface Endpoints**
+- A **VPC Endpoint Service** is a service **you create and expose** (usually behind a NLB) so that **other VPCs or AWS accounts can connect** to it using an Interface Endpoint.
+- Built using **Network Load Balancer**
+- Associated with **Private DNS (optional)**
+- You **approve or auto-accept** endpoint connection requests
+- Access Control:
+ - Use **IAM policies** on endpoint
+ - **Security Groups** attached to the ENI
+ - NACLs
+ - Resource-based policies on the service
+- Use Cases:
+- SaaS provider exposing services to customers privately via **PrivateLink**
+- Internal services across multiple VPCs/accounts without Transit Gateway or VPC peering
+- Reducing attack surface by avoiding public IPs
+- Centralized security services (e.g., a logging or inspection service)
+- Key Requirements:
+ - NLB must **target instances or IPs** (cannot use Lambda)
+ - NLB subnets must have **free private IPs**
+ - All target instances must be **in a subnet with connectivity to the NLB**
+ - VPC Endpoint Service must be **available in the same region** as consumer endpoint
+ - Only **TCP/TLS protocols** are supported
+
+**Architecture Components**
+| Component             | Description |
+|-----------------------|-------------|
+| **Service VPC**       | Where the service/NLB is hosted |
+| **Consumer VPC**      | Where the Interface Endpoint resides |
+| **NLB**               | Must be **internet-facing or internal**, must use TCP or TLS |
+| **Interface Endpoint**| ENI in consumer VPC connecting to the service |
+| **Private DNS**       | Enables endpoint to be accessed via domain instead of VPCE DNS |
+
+ 🧠 Pro Tips for Exam
+ - ❌ VPC Peering allows full traffic; PrivateLink is for specific services
+ - ✅ Interface Endpoints scale horizontally, use ENIs across AZs
+ - ✅ Interface Endpoints support cross-account, cross-VPC traffic
+ - ✅ NLB in service VPC must support TCP/TLS
+ - ✅ You must explicitly allow other accounts or orgs
+ - ❌ PrivateLink does not support UDP or ICMP
+ - ✅ Use Private DNS to allow DNS resolution inside the consumer VPC
+
+📝 Exam sample
+A SaaS provider needs to expose a billing microservice in one account to customers in multiple AWS accounts with low latency and no internet access. Use **PrivateLink** by:
+- Creating a **VPC Endpoint Service** in the SaaS provider account
+- Backed by an internal **NLB**
+- Customers connect using **Interface Endpoints**
 
 ### 📖 Amazon ECS
+- Amazon ECS is a **fully managed container orchestration service** used to deploy, manage, and scale containerized applications.
+- Use **`awsvpc` mode** for **fine-grained security** (ENIs, SGs, IAM).
+- Tasks in `awsvpc` mode get **their own security group** and **VPC subnet placement**
+- Use **task IAM roles** to grant least privilege access
+- Can use **Service Connect** or **App Mesh** for secure service-to-service communication
+- You can attach a load balancer to automatically register/deregister task IPs
+- Target groups are used in **dynamic port mapping**
 
+| Launch Type     | Description |
+|------------------|-------------|
+| **Fargate**      | Serverless compute engine; no infrastructure to manage |
+| **EC2**          | Run tasks on your own EC2 instances in an ECS cluster |
+| **External**     | Manage workloads on external infrastructure (on-prem or other cloud) |
+| **Fargate with EKS** | Not ECS but worth knowing for contrast |
+
+| Network Mode   | Description |
+|----------------|-------------|
+| **bridge**     | Docker’s default, uses NAT inside the EC2 host |
+| **host**       | Container shares the host's network stack (no NAT) |
+| **awsvpc**     | Each task gets an ENI (Elastic Network Interface) in the VPC |
+| **none**       | No external connectivity |
+
+**Key ECS Components**
+| Component     | Description |
+|---------------|-------------|
+| **Task**      | A running container definition |
+| **Task Definition** | Blueprint describing container images, CPU/mem, IAM role, port mappings |
+| **Service**   | Maintains desired # of task replicas |
+| **Cluster**   | Logical grouping of tasks or services |
+| **Scheduler** | Places tasks on available infrastructure |
+
+**Service Discovery in ECS**
+- ECS integrates with **AWS Cloud Map**
+- Register ECS services in **Route 53 Private Hosted Zone**
+- ECS handles service health and DNS registration/deregistration
+
+**ECS Security Best Practices**
+- Use **IAM Task Roles**
+- Place services in **private subnets** + use **NAT Gateway** if needed
+- Enable **container-level logging** to CloudWatch
+- Isolate workloads with **SGs and VPCs**
+
+**Best Practices & Design Patterns**
+- Use **Fargate + awsvpc** for max isolation and least management
+- Use **Auto Scaling** for services (based on CPU/memory/custom metrics)
+- Use **App Mesh** or **Service Connect** for internal communication
+- Use **PrivateLink** or VPC Endpoints for accessing AWS APIs securely
+
+ 🧠 Pro Tips for Exam
+- ✅ Use **`awsvpc` mode** if each task needs **own IP address** and **SG**
+- ✅ ECS supports **PrivateLink**, ALB/NLB, service discovery
+- ❌ ECS does **not support IPv6** in Fargate (as of now)
+- ✅ ECS + ALB requires container **health checks**
+- ✅ ECS tasks/services can span **multi-AZ** in the same region
+- ❌ ECS does **not natively support cross-region task placement**
 
 # Labs
 - [Configure an Amazon EC2 Instance with Dual-Homed Network Connectivity] (https://app.pluralsight.com/hands-on/labs/2c732866-9017-4b5f-bc7b-ee8b6589ef32?ilx=true)
