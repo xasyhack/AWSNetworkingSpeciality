@@ -924,6 +924,63 @@ Lifecycle Flow
 | **Attachment**        | Connection between VPC/TGW and Core Network                                 |
 
 ## Configure Network Integration wit Application Services
+### 📖 Domain name system
+- DNS (Domain Name System) translates **human-readable domain names** into **IP addresses** that computers use to identify each other over the internet or within a private network.
+- Split-Horizon DNS: Use **same domain name** with **different IPs** in public and private zones. Prevents leaking internal IPs externally.
+
+| Service            | Description                                                                   |
+|-------------------|--------------------------------------------------------------------------------|
+| **Route 53**       | AWS's highly available and scalable DNS and domain name registration service  |
+| **Private Hosted Zones** | Used for **internal DNS resolution** within a VPC                       |
+| **Public Hosted Zones**  | Used for **internet-facing domains**                                    |
+
+| Feature                        | Details                                                                 |
+|-------------------------------|-------------------------------------------------------------------------|
+| **Routing Policies**           | Simple, Weighted, Latency-based, Failover, Geolocation, Multivalue     |
+| **Health Checks**              | Monitors endpoints, supports automatic failover                        |
+| **DNS Failover**               | Reroutes traffic when endpoint fails                                   |
+| **Private Hosted Zone (PHZ)**  | Resolves DNS names **within VPCs only**                                |
+| **Inbound/Outbound Endpoints** | For **hybrid cloud DNS resolution** (Route 53 Resolver)                |
+
+**Route 53 Resolver**
+| Component              | Description                                                                 |
+|------------------------|-----------------------------------------------------------------------------|
+| **Inbound Endpoint**   | On-prem → AWS DNS resolution                                                |
+| **Outbound Endpoint**  | AWS → On-prem DNS resolution                                                |
+| **Rules**              | Forward specific domains to custom DNS resolvers (e.g., `corp.example.com`) |
+
+**Routing Policy Use Cases**
+| Policy Type         | Use Case Example                                                |
+|---------------------|------------------------------------------------------------------|
+| **Simple**          | Single resource per domain                                       |
+| **Weighted**        | Blue/Green deployments, A/B testing                              |
+| **Latency**         | Global applications – route to region with lowest latency        |
+| **Failover**        | DR setup – route to healthy resource                            |
+| **Geolocation**     | Route based on user’s location                                   |
+| **Multivalue**      | Acts like Round Robin + Health Checks                            |
+
+**Integration Scenarios**
+| Scenario                              | Solution                                                                 |
+|---------------------------------------|--------------------------------------------------------------------------|
+| On-prem to AWS DNS                    | Route 53 Resolver + Inbound Endpoint                                     |
+| AWS to on-prem DNS                    | Route 53 Resolver + Outbound Endpoint + Forwarding rules                 |
+| Multi-region resolution               | Route 53 with **latency** or **geolocation** routing policies            |
+| Service discovery in VPC              | Use **Route 53 Private Hosted Zone** or **Cloud Map**                    |
+
+📝 Exam sample
+Your company has a hybrid architecture. You want DNS resolution for `internal.corp` from AWS resources and also resolve AWS private domains from on-prem. What should you configure?
+- Set up Route 53 Resolver **inbound endpoint** for on-prem → AWS DNS
+- Set up **outbound endpoint** with forwarding rule for `internal.corp`
+- Use Private Hosted Zones for AWS-internal domains
+  
+### 📖 Route 53 hosted Zones, zone records, subdomain delegation, routing policies, health checks, private hosted zones
+
+### 📖 Elastic Load Balancer, target groups, application load balancer, network load balancer, classic load balancer, gateway load balancer
+
+### 📖 VPC Endpoint Services
+
+### 📖 Amazon ECS
+
 
 # Labs
 - [Configure an Amazon EC2 Instance with Dual-Homed Network Connectivity] (https://app.pluralsight.com/hands-on/labs/2c732866-9017-4b5f-bc7b-ee8b6589ef32?ilx=true)
