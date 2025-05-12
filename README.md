@@ -1235,6 +1235,315 @@ A SaaS provider needs to expose a billing microservice in one account to custome
 - ✅ ECS tasks/services can span **multi-AZ** in the same region
 - ❌ ECS does **not natively support cross-region task placement**
 
+### 📖 CloudFront securing with TLS/SSL, private viewer access, field-level encryption, invalidating and expiring files, optimizing CloudFront distribution
+**TLS/SSL for CloudFront**
+- CloudFront supports HTTPS using SSL/TLS certificates.
+- Certificate options:
+  - **AWS Certificate Manager (ACM)** – must be in `us-east-1` for CloudFront.
+  - **Custom Certificate** in IAM or ACM.
+- **Viewer Protocol Policy**:
+  - `Redirect HTTP to HTTPS`
+  - `HTTPS Only`
+- **Origin Protocol Policy**:
+  - `Match Viewer`
+  - `HTTPS Only`
+- **SNI (Server Name Indication)**:
+  - Supports multiple secure websites (TLS) on one distribution.
+ 
+**Private Content Access (Signed URLs / Cookies)**
+- Restrict access to content on S3 or custom origins.
+- Methods:
+  - **Signed URLs** – limit access to specific objects.
+  - **Signed Cookies** – limit access to multiple objects or entire paths.
+- Requirements:
+  - **CloudFront Key Pair**
+  - **Trusted Signer** (IAM user with the key pair)
+
+**Field-Level Encryption (FLE)**
+- Encrypt sensitive data (like PII) **at the field level** before it reaches your origin.
+- Uses **asymmetric encryption (RSA)**.
+- Steps:
+  - Create **FLE Profile** (public key + fields to encrypt).
+  - Create **FLE Config** and attach to CloudFront.
+- Data is encrypted at the edge and decrypted by the origin.
+- Works alongside HTTPS for full-stack encryption.
+
+**Invalidation and Cache Expiry**
+- **Invalidate** cached content manually before TTL expiry.
+- Tools:
+  - AWS Console
+  - AWS CLI:
+    ```bash
+    aws cloudfront create-invalidation \
+      --distribution-id <DIST_ID> \
+      --paths "/index.html" "/images/*"
+    ```
+- Use sparingly to avoid cost; prefer versioned file names for cache busting.
+
+ 🧠 Pro Tips for Exam
+- ACM certs **must be in us-east-1** for CloudFront.
+- Signed cookies/URLs are used with **S3** and **custom origins**.
+- FLE is for **extra security** on form data (e.g., credit cards).
+- Use **versioned URLs** to avoid excessive invalidation charges.
+
+### 📖 Customizing requests using Lambda@Edge and CloudFront Functions
+**CloudFront Functions (CFF)**
+- Lightweight **JavaScript-based functions** that run at CloudFront edge locations.
+- Designed for **high-volume, low-latency** request processing.
+- Use Cases:
+ - URL rewrites/redirects
+ - Header manipulation
+ - Request validation (e.g., user-agent check, geoblocking)
+ - A/B testing
+ - Simple authentication tokens
+- Execution Phase:
+ - **Viewer Request**
+ - **Viewer Response**
+- Characteristics:
+ - Extremely low latency
+ - Cost-effective for short, simple logic
+ - No IAM role needed (executes with CloudFront service permissions)
+ - Cannot access origin (no fetch or AWS SDK)
+
+**Lambda@Edge (L@E)**
+- AWS Lambda functions **replicated globally** and run in CloudFront edge locations.
+- Powered by full Lambda service (Node.js, Python).
+- Use Cases：
+ - **Dynamic origin selection**
+ - **Origin failover handling**
+ - Inserting signed cookies/headers
+ - Device-based rendering
+ - Advanced authentication (OAuth, JWT validation)
+ - Field-Level Encryption integration
+- Execution Phases:
+ - **Viewer Request**
+ - **Viewer Response**
+ - **Origin Request**
+ - **Origin Response**
+- Characteristics:
+ - More powerful: full Lambda environment (e.g., access to AWS SDK)
+ - Higher latency than CloudFront Functions
+ - Requires IAM execution role
+ - Logs via CloudWatch
+
+| Feature                  | CloudFront Functions         | Lambda@Edge                   |
+|--------------------------|------------------------------|-------------------------------|
+| Language                 | JavaScript                   | Node.js / Python              |
+| Latency                 | Very Low                     | Higher                        |
+| Execution Time Limit     | 1 ms                         | 5 sec (sync), 30 sec (async)  |
+| Execution Phases         | Viewer Req / Viewer Resp     | All 4 phases                  |
+| Access AWS Services      | ❌ No                        | ✅ Yes (via AWS SDK)         |
+| Logging                  | Limited (Metrics only)       | Full CloudWatch logs          |
+| Use Case Type            | Lightweight logic            | Heavy custom logic            |
+
+🧠 Exam Tips
+- CloudFront Functions **cannot call AWS services** (like DynamoDB/S3).
+- For **dynamic origin selection**, you **must use Lambda@Edge** (Origin Request phase).
+- If you want to **inject security headers**, both CFF and L@E can be used (Viewer Response phase).
+- **Lambda@Edge** supports **all 4 event triggers**, while CFF supports only **Viewer Request/Response**.
+- **Lower latency or cost-sensitive applications** → prefer CloudFront Functions.
+- CloudFront Functions are **faster and cheaper**, but limited to JavaScript and simple use cases.
+- **L@E requires deployment from us-east-1**.
+
+### 📖 AWS Global Accelerator
+- AWS Global Accelerator (AGA) is a **global traffic management service** that improves **availability and performance** for global applications using **Anycast IPs** and the **AWS global network backbone**.
+- Use Cases：
+ - **Global applications** needing consistent IP addresses
+ - **Disaster recovery** with active-active or active-passive failover
+ - **Improved latency** for users worldwide
+ - **Blue/green or canary deployments** using traffic dials
+ - **Gaming, VoIP, financial services** where TCP/UDP latency matters
+- How It Works：
+1. Global Accelerator assigns **two static Anycast IPs**.
+2. Client connects to **nearest AWS edge location**.
+3. AGA uses AWS backbone to route to **optimal AWS region and endpoint**.
+4. If endpoint/region fails → **automatic failover** to healthy region.
+   
+| Feature                      | Description                                                                 |
+|-----------------------------|-----------------------------------------------------------------------------|
+| **Anycast IPs**             | Two static IPv4 addresses (for high availability + fault tolerance)        |
+| **Global Edge Network**     | Routes traffic through nearest AWS edge location to AWS Regional endpoint  |
+| **Health Checks**           | Automatically detects unhealthy endpoints and reroutes traffic             |
+| **Traffic Dials**           | Control % of traffic going to each region                                  |
+| **Endpoint Types**          | ALB, NLB, EC2, Elastic IPs, AWS Lambda (via ALB), IP-based endpoints       |
+| **IP Preservation**         | Supports client IP preservation at endpoint (with NLB or ALB)              |
+| **Failover**                | Fast, automatic regional failover within seconds                           |
+| **Routing Control**         | Integrates with Route 53 Application Recovery Controller (ARC)             |
+| **Support for IPv6**        | Yes (as of 2023, dual-stack support added)                                 |
+
+Comparison: Global Accelerator vs CloudFront vs Route 53
+| Feature                  | Global Accelerator                      | CloudFront                         | Route 53                          |
+|--------------------------|-----------------------------------------|------------------------------------|-----------------------------------|
+| **Protocol**             | TCP, UDP                                | HTTP/HTTPS                         | DNS only                          |
+| **Use Case**             | Global app acceleration & HA            | Web content caching, CDN           | DNS-based routing                 |
+| **Latency Improvement**  | ✅ Yes (network-level routing)           | ✅ Yes (edge caching)              | ❌ No (DNS latency not improved)  |
+| **IP Type**              | Static Anycast IPs                      | Dynamic per distribution           | No IP, just DNS                   |
+| **TLS Termination**      | At ALB/NLB (not AGA)                    | At CloudFront edge                 | N/A                               |
+| **Failover Speed**       | Seconds                                 | Minutes (depends on cache TTL)     | TTL-based (slow unless using health checks) |
+
+🧠 Exam Tips
+- AGA provides **static Anycast IPs** – perfect for **multi-region failover** and **latency-based routing**.
+- **Route 53 is DNS-based**, while **AGA is IP-based with near real-time failover**.
+- Use **traffic dials** in AGA to shift traffic gradually (e.g., 70% to region A, 30% to region B).
+- For **TCP/UDP protocols (non-HTTP)** like gaming or VoIP, AGA is preferred over CloudFront.
+- **CloudFront** is for **HTTP content delivery**, **not** raw network acceleration.
+- AGA can **improve cross-region failover and performance** by routing via AWS backbone.
+- AGA **does not cache content** — it's not a CDN.
+
+📝 Exam sample
+Your company runs a multi-region application across us-east-1 and eu-west-1. You want a consistent IP address, low latency for global users, and automatic failover with minimal downtime. *What should you use?
+- **AWS Global Accelerator** – provides a global Anycast IP and automatic health-based routing/failover.
+
+### 📖 Lambda within a VPC
+- By default, AWS Lambda **functions run in an isolated environment** with **access to the public internet**. To allow access to **resources inside a private VPC**, you can **attach a VPC to a Lambda function**.
+- Execution Flow：
+1. Lambda is invoked
+2. ENI is created in selected VPC subnets (cold start)
+3. Lambda uses ENI to access VPC resources (e.g., RDS)
+4. If no NAT or VPC Endpoint: **no internet access**
+- Use Cases：
+ - Accessing **private RDS/MySQL/PostgreSQL**
+ - Accessing **resources in private subnets**
+ - Using **Secrets Manager** securely inside a VPC
+ - Controlled **egress traffic** using NAT or security group
+- Sample Architecture：
+ - Lambda (in VPC) → Private Subnet (ENI) → NAT Gateway → Internet
+ - Lambda (in VPC) → Private Subnet → RDS/MySQL (private subnet)
+
+| Component             | Details                                                                 |
+|----------------------|-------------------------------------------------------------------------|
+| **Subnets**          | Lambda must be attached to at least **2 private subnets** in different AZs |
+| **Security Groups**  | Lambda uses a SG to control outbound/inbound traffic                     |
+| **ENI (Elastic Network Interface)** | Created in each subnet to allow Lambda to connect into VPC         |
+| **VPC Access**       | Enables access to **RDS, EC2, ElastiCache**, etc.                        |
+| **Internet Access**  | Lambda **loses public internet access** unless:                         |
+|                      | - **NAT Gateway + Route Table** in private subnet                        |
+|                      | - **VPC Endpoint (for AWS APIs)**                                        |
+| **Performance Impact** | Cold start latency increases with VPC-attached Lambda                   |
+
+**Best Practices**
+| Area                 | Recommendation                                           |
+|----------------------|----------------------------------------------------------|
+| **Subnets**          | Use **private subnets** with **NAT Gateway** if needed    |
+| **Cold Start**       | Use **Lambda SnapStart** (Java only) or keep warm via scheduled events |
+| **Minimize Latency** | Use **VPC Lambda** only if you need VPC access           |
+| **Avoid Public Subnets** | To prevent ENI exhaustion and increase security            |
+| **Monitor ENIs**     | Use **CloudWatch metrics** for Lambda and VPC      
+
+🧠 Exam Tips
+✅ Lambda in VPC **loses internet access by default**  
+✅ Use **NAT Gateway** or **VPC Endpoints** to restore access  
+✅ Attaching Lambda to VPC creates **ENIs**, which causes **cold start delay**  
+✅ Place Lambda in **private subnets**, not public  
+✅ Required for access to **private RDS, ElastiCache, Redshift (without public endpoint)**  
+✅ Avoid using **public subnets** with IGW for Lambda — unnecessary and insecure
+
+📝 Exam sample
+You need a Lambda function to connect to an Amazon RDS database deployed in a private subnet. Which of the following is required?
+- Attach Lambda to the same VPC and private subnets as RDS  
+
+### 📖 Running Kubernetes in AWS
+- Kubernetes (K8s) is an open-source container orchestration platform. AWS provides two main options to run Kubernetes:
+
+| Option                | Description                                             |
+|----------------------|---------------------------------------------------------|
+| **Amazon EKS**       | Managed Kubernetes control plane by AWS                 |
+| **Self-managed K8s** | User installs and manages Kubernetes on EC2 manually    |
+
+**Amazon EKS (Elastic Kubernetes Service)**
+| Feature                 | Details                                                                 |
+|--------------------------|------------------------------------------------------------------------|
+| **Control Plane**        | Fully managed by AWS, highly available across 3 AZs                     |
+| **Worker Nodes**         | EC2 instances or Fargate (serverless)                                  |
+| **Networking**           | Uses **VPC CNI plugin** to assign **VPC IPs to pods**                   |
+| **IAM Integration**      | Uses **IAM Roles for Service Accounts (IRSA)**                         |
+| **EKS Add-ons**          | Managed add-ons (CoreDNS, kube-proxy, VPC CNI)                         |
+| **Cluster Autoscaler**   | Automatically adjusts EC2 worker node count                            |
+| **Fargate Profiles**     | Run pods without managing EC2, with per-pod billing                    |
+
+**Networking in EKS**
+| Concept                  | Description                                                                 |
+|--------------------------|-----------------------------------------------------------------------------|
+| **Amazon VPC CNI Plugin**| Assigns **VPC IPs directly to pods**; integrates with ENIs                 |
+| **Security Groups for Pods** | Supported using **security group for pod (SGP)** feature                  |
+| **K8s Service Types**    | - `ClusterIP`: Internal-only service                                        |
+|                          | - `NodePort`: Maps pod ports to a node’s IP and port                      |
+|                          | - `LoadBalancer`: Creates an AWS ELB (ALB/NLB) for external access         |
+| **Ingress Controller**   | Use **ALB Ingress Controller** for HTTP routing to services                |
+| **IP Address Management**| Assigns IPs per pod; watch out for IP exhaustion in large clusters         |
+| **Egress Control**       | NAT Gateway required for private subnet pods accessing the internet        |
+
+**Key Design Considerations**
+| Topic                    | Best Practice / Tip                                                       |
+|--------------------------|---------------------------------------------------------------------------|
+| **Networking Mode**      | Use **Amazon VPC CNI** (native pod-to-pod routing with VPC IPs)           |
+| **Scaling**              | Use **Cluster Autoscaler** or **Karpenter**                              |
+| **Security**             | Use **IAM roles for service accounts** + **SG for Pods**                 |
+| **Logging**              | Enable **CloudWatch Container Insights**, audit logs                     |
+| **Egress**               | Place nodes in private subnets + NAT Gateway or use VPC Endpoints        |
+
+🧠 Exam Tips
+✅ Understand **how the VPC CNI plugin assigns IPs** to pods (each pod = one VPC IP)  
+✅ **EKS assigns ENIs** in subnets for pods; this may **exhaust IPs** quickly  
+✅ **ALB Ingress Controller** is commonly used for routing external traffic  
+✅ **Security groups for pods** allow granular control (SGP)  
+✅ Use **Fargate** to eliminate EC2 node management  
+✅ For **public clusters**, ensure **control plane endpoint is exposed**, for **private** clusters, configure **interface endpoints**
+
+📝 Exam sample
+You are deploying a high-scale Kubernetes workload on EKS. Each pod needs an individual IP address and must be reachable from other VPC services. What CNI plugin should you use?
+- The **AWS VPC CNI** allows pods to get VPC IPs and integrate with other AWS services directly.
+
+### 📖 Amazon WorkSpaces
+- Amazon WorkSpaces is a fully managed, secure Desktop-as-a-Service (DaaS) that allows provisioning Windows and Linux virtual desktops to users.
+
+**Architecture Overview**
+| Component               | Description                                                                 |
+|------------------------|-----------------------------------------------------------------------------|
+| **WorkSpace**           | The virtual desktop instance running Windows or Linux                       |
+| **Directory Service**   | Required for authentication (Simple AD, AD Connector, or AWS Managed AD)   |
+| **VPC**                 | Each WorkSpace is launched into a subnet within a VPC                      |
+| **WAM (App Manager)**   | Manages packaging and deployment of desktop applications                   |
+| **Connection Gateway**  | Manages secure connection between WorkSpaces clients and desktops          |
+
+**Network & Connectivity**
+| Topic                         | Details                                                                 |
+|------------------------------|-------------------------------------------------------------------------|
+| **Internet Access**           | Requires NAT Gateway for outbound internet if launched in private subnets |
+| **Subnets**                   | Can be in **private or public subnets**; private subnets need NAT        |
+| **WorkSpaces Gateway**        | Used for secure communication from client to the virtual desktop         |
+| **Required Ports**            | TCP: `443` (HTTPS), `4172` (PCoIP), `4195` (WSP)                         |
+| **DNS**                       | VPC DNS or custom DNS with Directory Integration                        |
+| **Access via Clients**        | Web browser, iOS, Android, Windows, macOS supported                     |
+
+**Use Cases**
+| Use Case                       | Benefit                                                              |
+|--------------------------------|----------------------------------------------------------------------|
+| **Remote Employees**           | Secure access from anywhere without provisioning hardware           |
+| **Contractors/Temp Workers**   | Quickly spin up/down desktops for short-term staff                  |
+| **Secure Desktop Requirements**| Data stays within AWS; no local downloads or transfers              |
+| **BYOD Environments**          | Employees access desktops using personal devices                    |
+
+🧠 Exam Tips
+✅ **Always requires a Directory Service** (Simple AD, AD Connector, or AWS Managed Microsoft AD)  
+✅ **No inbound ports required** – outbound connection is initiated from WorkSpaces  
+✅ **WorkSpaces launched in private subnets** need NAT Gateway to access the internet  
+✅ Use **S3 VPC Endpoint** if WorkSpaces need to access S3 without NAT  
+✅ Ensure **security groups and NACLs** allow required outbound ports  
+✅ CloudWatch is used for **monitoring session connectivity and usage**
+
+📝 Exam sample
+You are launching Amazon WorkSpaces into a VPC with only private subnets. You want WorkSpaces to access the internet for software updates. What must you configure?
+- ** Private subnets need a **NAT Gateway** to allow outbound internet access.
+
+### 📖 Amazon AppStream 2.0
+
+### 📖 AWS App Mesh
+
+### 📖 Securing API Gateway
+
+
+
 # Labs
 - [Configure an Amazon EC2 Instance with Dual-Homed Network Connectivity] (https://app.pluralsight.com/hands-on/labs/2c732866-9017-4b5f-bc7b-ee8b6589ef32?ilx=true)
 
