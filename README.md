@@ -976,7 +976,8 @@ Your company has a hybrid architecture. You want DNS resolution for `internal.co
 | **Private Hosted Zone (PHZ)** | DNS for internal VPC communication                    |
 
 **Private Hosted Zones (PHZ)**
-- Ensure **VPCs are explicitly associated** with the PHZ, or they won’t be able to resolve the internal DNS records.
+Ensure **VPCs are explicitly associated** with the PHZ, or they won’t be able to resolve the internal DNS records.
+
 | Feature              | Description                                                   |
 |----------------------|---------------------------------------------------------------|
 | Scope                | DNS resolution **within one or more associated VPCs**         |
@@ -994,6 +995,8 @@ Your company has a hybrid architecture. You want DNS resolution for `internal.co
 
 **DNS Record Types**
 - ALIAS records allow pointing root domain (`example.com`) to AWS services (e.g., ELB, CloudFront, S3) without violating DNS rules
+- CNAME pointing subdomains to another domain or subdomain (e.g., `www.example.com` → `example.com` or `app.example.com` → `app.serviceprovider.com`).
+
 | Record Type | Purpose                                        |
 |-------------|------------------------------------------------|
 | A           | IPv4 address of a domain                       |
@@ -1003,6 +1006,14 @@ Your company has a hybrid architecture. You want DNS resolution for `internal.co
 | NS          | Delegates a subdomain to another name server   |
 | TXT         | Holds arbitrary text (SPF, DKIM, etc.)         |
 | ALIAS       | AWS-specific: behaves like CNAME but at zone apex |
+
+| Feature                 | CNAME                                 | Alias                              |
+|-------------------------|-------------------------------------|----------------------------------|
+| Can be used at root domain (zone apex)? | No                                  | Yes                              |
+| Supported DNS servers    | Standard DNS                         | AWS Route 53 only                 |
+| Can point to AWS resources (ELB, CloudFront)? | No                                  | Yes                              |
+| Extra DNS lookup needed  | Yes (two lookups: alias → canonical → IP) | No (resolved internally)          |
+| Pricing impact           | Standard DNS query charges apply    | Alias queries to AWS resources are free in Route 53 |
 
 **Subdomain Delegation**
 - **Goal**: Let another team or account manage a subdomain (e.g., `dev.example.com`)
@@ -1679,6 +1690,31 @@ Securiry
   - Each partition’s instances are isolated on different racks.  
   - Allows scaling beyond limits of spread groups while isolating failure domains.  
   - Ideal for distributed storage systems like Hadoop, Cassandra.
+ 
+## Hybrid Networking Basics and VPNs in AWS
+### 📖 Virtual Private Gateway
+
+### 📖 AWS Hybrid Route
+
+### 📖 Border Gateway Protocol (BCP)
+
+### 📖 VPC and IPSec Overview
+
+### 📖 Customeer Gateways
+
+### 📖 AWS Site-to-Site VPN Configuration
+
+### 📖 AWS VGW and VPN limitation
+
+### 📖 VPN Anywhere with AWS Client VPN
+
+### 📖 Hub-and-Spoke VPN with AWS VPN CloudHub
+
+### 📖 Third-Party VPN Solutions
+
+### 📖 AWS VPN Monitoring and Optmization
+
+### 📖 AWS VPN Cost Optimzation 
 
 # Labs
 - [Configure an Amazon EC2 Instance with Dual-Homed Network Connectivity] (https://app.pluralsight.com/hands-on/labs/2c732866-9017-4b5f-bc7b-ee8b6589ef32?ilx=true)
