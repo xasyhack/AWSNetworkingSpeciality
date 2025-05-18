@@ -1063,6 +1063,7 @@ You need to allow an on-prem data center to resolve internal AWS hostnames in a 
  - Protocol (HTTP, HTTPS, TCP, UDP, TLS, GENEVE)
  - Port
  - Health check config
+   
 | Target Type    | Supported by                 | Notes                                          |
 |----------------|------------------------------|------------------------------------------------|
 | Instance       | ALB, NLB                     | Targets are EC2 instances                      |
