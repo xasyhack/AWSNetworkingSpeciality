@@ -1537,12 +1537,148 @@ You are launching Amazon WorkSpaces into a VPC with only private subnets. You wa
 - ** Private subnets need a **NAT Gateway** to allow outbound internet access.
 
 ### 📖 Amazon AppStream 2.0
+- Amazon AppStream 2.0 is a fully managed application streaming service that lets users access desktop apps securely from anywhere, without needing to rewrite them.
+Scenarios:
+- Secure access to internal desktop apps  
+- No local installation required  
+- Scaling app delivery globally  
+
+| Feature                     | Description                                                                                   |
+|----------------------------|-----------------------------------------------------------------------------------------------|
+| **Service Type**           | Desktop-as-a-Service (DaaS) for application/desktop streaming                                |
+| **Protocol**               | NICE DCV (optimized for low latency, high-performance streaming)                             |
+| **Use Cases**              | Secure remote work, application delivery for developers/designers, software trials           |
+| **Deployment Type**        | Fully managed — no infrastructure to provision manually                                      |
+| **Access Method**          | HTML5 browser (no client installation required)                                               |
+| **Streaming Instances**    | Run apps on AWS-managed fleets of EC2 instances                                               |
+| **Auto Scaling**           | Supports fleets with automatic scaling policies                                               |
+| **Storage Options**        | AppStream can access S3, EFS, OneDrive, Google Drive, and Home Folders                       |
+| **Authentication**         | AWS SSO, SAML 2.0 federation, Active Directory (Microsoft AD)                                |
+
+**Networking Considerations**
+| Topic                     | Details                                                                 |
+|--------------------------|-------------------------------------------------------------------------|
+| **VPC Integration**       | Instances must be launched in **private subnets** with NAT/IGW access    |
+| **Security Groups**       | Control access to/from streaming instances                              |
+| **Streaming Gateway**     | Communication flows via AWS-managed streaming gateway using **HTTPS**  |
+| **Internet Access**       | Requires NAT Gateway if in private subnet                               |
+| **Domain Join**           | Supports domain join via AWS Managed Microsoft AD or self-managed AD    |
+
+**Basic Setup Flow**
+1. **Create an image** using Image Builder
+2. **Create a Fleet** (Always-On or On-Demand)
+3. **Create a Stack**
+4. **Associate Fleet with Stack**
+5. **Enable user access** (native or federated)
+6. **Configure VPC, subnet, SGs**
+7. **Distribute URL to users**
+
+🧠 Exam Tips
+✅ AppStream 2.0 runs entirely inside your **VPC** – configure subnets, route tables, and security groups.  
+✅ Streaming instances do **not have public IPs** – use **NAT Gateway** or **VPC Endpoints** for internet access.  
+✅ Streams over **HTTPS (TLS)** via AWS-managed **Streaming Gateway** – no inbound rules required.  
+✅ Two fleet types:
+- ✅ **Always-On** – fast start, higher cost  
+- ✅ **On-Demand** – delayed start, cost-effective  
+✅ Supports native **Windows desktop applications** – no rewrite required.  
+✅ Can be **domain-joined** using AWS Managed Microsoft AD or self-managed AD.  
+✅ Assign **IAM roles** to streaming fleets for access to AWS services like S3, DynamoDB.  
+✅ Supports **persistent storage** via:
+- ✅ Amazon S3 (Web folders)  
+- ✅ OneDrive  
+- ✅ Google Drive  
+- ✅ Amazon FSx
+✅ Use **Image Builder** to create custom images with pre-installed applications.  
+✅ User authentication options:
+- ✅ SAML 2.0  
+- ✅ AWS SSO  
+- ✅ AppStream 2.0 user pool  
+✅ Enable **CloudWatch Logs** for session tracking and troubleshooting.  
+✅ Common use case: Secure app delivery to remote users **without VPN**.  
 
 ### 📖 AWS App Mesh
+**AWS App Mesh** is a **service mesh** that provides application-level networking for **microservices** to monitor and control communications across services running on **ECS**, **EKS**, **Fargate**, or **EC2**.
+- App Mesh uses **Envoy** proxy as a sidecar to provide observability, traffic control, and secure communication.
+- Supports **mTLS** (mutual TLS) for encrypted service-to-service communication
+- Integrates with **ACM** for certificate management
+Use cases:
+- Fine-grained traffic control (canary, A/B testing, blue/green deployment)
+- Zero-downtime deployments
+- Secure and observable microservice communication
+
+🧠 Exam Tips
+✅ App Mesh provides **application-layer (L7)** networking, unlike traditional L4 networking in VPC.  
+✅ Uses **sidecar pattern** via **Envoy proxy** injected alongside application containers.  
+✅ Supports both ECS and EKS, but needs Envoy integration and configuration.  
+✅ Common scenario: replacing traditional NGINX proxying or custom SDK retries with App Mesh.  
+✅ Helps you **avoid tight coupling between services** – no hardcoded IPs or DNS logic.  
+✅ Choose App Mesh when **central control of microservices routing and observability** is needed.  
+✅ For **service discovery**, App Mesh integrates with **AWS Cloud Map**.  
 
 ### 📖 Securing API Gateway
+- Create, publish, maintain, monitor, and secure **APIs at any scale**
+- Build RESTful, HTTP, and WebSocket APIs to act as **“front doors”** for applications to access backend services
+Securiry
+- IAM authorization  
+- Lambda authorizers (custom logic)  
+- Amazon Cognito User Pools  
+- Resource policies (restrict IPs, VPCs, AWS accounts)  
+- API Keys (for throttling and usage plans)
+- Private API
+ - Require an **Interface VPC Endpoint** (powered by AWS PrivateLink)
+ - Use **Resource Policies** to control who can call the API
 
+| API Type         | Use Case                                                    |
+|------------------|-------------------------------------------------------------|
+| REST API         | High control, supports usage plans, caching, throttling     |
+| HTTP API         | Lightweight, lower latency and cost, JWT/OIDC auth          |
+| WebSocket API    | Real-time bi-directional communication (chat, games, etc.)  |
 
+🧠 Exam Tips
+✅ Know when to use **HTTP APIs vs REST APIs**  
+✅ Use **VPC Link** when your API needs to reach **private ALB/NLB endpoints**  
+✅ For **private APIs**, you must create a **VPC Endpoint (Interface)**  
+✅ You can **throttle** and apply **usage plans** using API Keys  
+✅ Combine API Gateway + Lambda for **serverless** RESTful APIs  
+✅ **Edge-optimized APIs** use CloudFront for global low latency  
+✅ Use **IAM auth** for service-to-service internal access  
+✅ **Resource policies** are essential for **restricting access** (IP, VPC, accounts)  
+✅ **Enable logging** for troubleshooting and **CloudWatch metrics** for API health 
+
+### 📖 Enabling Enahnced Networking on Amazon EC2
+| Technology                   | Supported Instance Types              | Max Throughput       | Description                                         | Driver Required     |
+|-----------------------------|-------------------------------------|----------------------|-----------------------------------------------------|---------------------|
+| Elastic Network Adapter (ENA)| Latest generation (e.g., C5, M5, R5)| Up to 100 Gbps       | Most common, recommended adapter for enhanced networking | ENA driver          |
+| Intel 82599 Virtual Function (VF) | Older generation (e.g., C3, I3, R3) | Up to 10 Gbps        | Older adapter, lower max throughput                  | Intel VF driver     |
+| Elastic Fabric Adapter (EFA) | HPC optimized (e.g., P3dn, C5n)     | Up to 100 Gbps, low latency | For HPC and machine learning workloads using SRD protocol | EFA driver          |
+
+### 📖 Placement groups
+- A logical grouping of EC2 instances within a single Availability Zone designed to meet specific workload needs.
+- Placement groups influence the network topology and instance placement to optimize network performance and latency.
+
+| Type            | Description                                                                                  | Use Case                                                |
+|-----------------|----------------------------------------------------------------------------------------------|---------------------------------------------------------|
+| Cluster         | Packs instances close together within a single AZ for low-latency, high-bandwidth networking | HPC, big data, low-latency workloads                     |
+| Spread          | Distributes instances across distinct underlying hardware to reduce correlated failure risk   | Critical applications requiring high availability       |
+| Partition       | Divides instances into logical partitions within an AZ to isolate faults                      | Large distributed and replicated workloads (e.g., HDFS) |
+
+- **Cluster Placement Group**  
+  - Instances physically close, in one AZ.  
+  - Provides **low network latency** and **high throughput**.  
+  - Supports enhanced networking (ENA) and high-performance networking.  
+  - Limited to a single AZ, so not fault tolerant to AZ failure.
+
+- **Spread Placement Group**  
+  - Spreads instances across distinct hardware racks.  
+  - Limits impact of hardware failure to a single instance.  
+  - Maximum 7 running instances per AZ per group.  
+  - Suitable for critical, small sets of instances requiring high availability.
+
+- **Partition Placement Group**  
+  - Instances divided into logical partitions (1 to 7).  
+  - Each partition’s instances are isolated on different racks.  
+  - Allows scaling beyond limits of spread groups while isolating failure domains.  
+  - Ideal for distributed storage systems like Hadoop, Cassandra.
 
 # Labs
 - [Configure an Amazon EC2 Instance with Dual-Homed Network Connectivity] (https://app.pluralsight.com/hands-on/labs/2c732866-9017-4b5f-bc7b-ee8b6589ef32?ilx=true)
