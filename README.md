@@ -1694,18 +1694,241 @@ Securiry
  
 ## Hybrid Networking Basics and VPNs in AWS
 ### 📖 Virtual Private Gateway
+A **Virtual Private Gateway (VGW)** is a component that enables communication between your **Amazon VPC** and **on-premises networks** over **VPN** or **AWS Direct Connect**. It is a **region-level, fully managed, scalable VPN concentrator**.
+- **Supports IPsec VPN connections** (static or BGP-based)
+- **Supports AWS Direct Connect** attachments
+- **Attached to a single VPC**
+- **Provides HA by default** across multiple AZs (2 VPN tunnels)
+- **Supports route propagation to route tables**
+
+**Use Cases**
+- **Hybrid cloud connectivity** (on-prem ↔ AWS)
+- **Disaster recovery / backup tunnels**
+- **Connecting VPC to data centers using VPN or DX**
+- **Multi-VPC architectures** via DXGW
+
+| Component | Description |
+|----------|-------------|
+| **VGW** | The AWS side of a VPN or Direct Connect connection to a VPC. |
+| **Customer Gateway (CGW)** | Your on-premises device or software (e.g., firewall/router) that connects to AWS. |
+| **VPN Connection** | The link between VGW and CGW; can be static or dynamic (BGP). |
+| **Direct Connect Gateway** | An intermediate component to attach multiple VPCs (across regions) to a Direct Connect connection. |
+
+**VPN Connection Modes**
+| Mode | Description |
+|------|-------------|
+| **Static** | Manually defined routes between VGW and CGW |
+| **Dynamic (BGP)** | Route exchange using BGP – recommended for failover and automation |
+
+🧠 Exam Tips
+- VGW is **attached to one VPC only**.
+- For **multi-VPC DX**, use **Direct Connect Gateway (DXGW)**.
+- Supports **multi-AZ redundancy** by default (2 VPN tunnels).
+- **Can’t specify AZ** for VGW—it’s a **regional construct**.
+- VGW **cannot span VPCs**; for transitive routing, consider **Transit Gateway**.
+- Route tables with **propagation enabled** will automatically get BGP-learned routes.
+- **VGW + VPN** is a key option for **hybrid cloud scenarios**.
 
 ### 📖 AWS Hybrid Route
+**AWS Hybrid Route** refers to the **routing strategies and configurations used to connect on-premises networks with AWS environments**, typically through **Site-to-Site VPN**, **AWS Direct Connect**, or **Transit Gateway**.
+Design pattern:
+- Redundant Hybrid Connectivity: AWS Direct Connect + AWS Site-to-Site VPN + BGP Priority
+- Multi-Region Hybrid: TGW + DXGW
+
+| Component | Purpose |
+|----------|---------|
+| **Virtual Private Gateway (VGW)** | AWS VPN endpoint for VPC. |
+| **Customer Gateway (CGW)** | On-premises device or software for VPN or Direct Connect. |
+| **Transit Gateway (TGW)** | Centralized routing hub for multiple VPCs and on-prem networks. |
+| **Direct Connect Gateway (DXGW)** | Enables connections to VPCs across regions via Direct Connect. |
+| **Route Table** | Determines how traffic is directed within AWS and between AWS and on-prem. |
+
+**Routing Options**
+Option 1: **VGW + VPN**
+- IPsec-based VPN over public internet
+- **Dynamic routing** (BGP) or **static routing**
+- Route propagation to VPC route table
+
+Option 2: **VGW + Direct Connect**
+- Low latency, dedicated private connection
+- Private VIF connects to VGW (must be in same region)
+- Static or BGP routing
+
+Option 3: **Transit Gateway**
+- Centralized routing hub
+- Supports VPN and Direct Connect attachments
+- Simplifies multi-VPC hybrid connectivity
+
+Option 4: **Transit Gateway + Direct Connect Gateway**
+- For **inter-region** hybrid connectivity
+- DXGW → TGW peering supports **global hybrid architectures**
 
 ### 📖 Border Gateway Protocol (BCP)
+**BGP (Border Gateway Protocol)** is a dynamic routing protocol used to exchange routing information between **autonomous systems (ASes)**. In AWS, BGP is commonly used with:
+- **Site-to-Site VPN**
+- **AWS Direct Connect**
+- **Transit Gateway (TGW)** attachments
+
+| Concept | Description |
+|--------|-------------|
+| **eBGP** | BGP between different ASes (used in AWS VPN and DX) |
+| **AS Number (ASN)** | Unique identifier for each autonomous system |
+| **BGP Peer** | Two routers that exchange routing information |
+| **AS_PATH** | List of ASes a route has traversed (used for path selection) |
+| **Prefix** | IP address range advertised via BGP |
+| **CIDR Aggregation** | BGP supports advertising aggregated IP ranges |
+
+**VPN with VGW + BGP**
+- VGW supports dynamic routing using BGP
+- Two tunnels per VPN connection
+- AWS ASN (default: **64512**; configurable during VGW creation)
+- Supports **BGP MD5 authentication**
+
+**Direct Connect + BGP**
+- Private VIF uses BGP for route exchange
+- Customer ASN (private or public)
+- AWS ASN for DX: typically **7224** (public), configurable for private VIFs
+- BGP helps detect link state and route updates
+
+**Transit Gateway + VPN + BGP**
+- TGW VPN attachment supports BGP with route propagation to TGW route table
+
+**Route Preference Logic (BGP Path Selection)**
+1. **Highest Local Preference**
+2. **Shortest AS_PATH**
+3. **Lowest origin type**
+4. **Lowest MED (Multi Exit Discriminator)**
+5. **eBGP over iBGP**
+6. **Lowest router ID**
+
+| Feature | Details |
+|--------|---------|
+| **Redundancy** | BGP supports route failover across multiple tunnels |
+| **Failover** | If one tunnel goes down, BGP shifts traffic to another |
+| **Propagated Routes** | VPC route table can auto-update from BGP routes |
+| **AS_PATH Prepends** | Used to influence inbound route preference |
 
 ### 📖 VPC and IPSec Overview
+- VPC: A **logically isolated network** within the AWS Cloud where users can launch AWS resources in a virtual network defined by them.
+- IPSec: A suite of protocols used to **secure IP communication** by authenticating and encrypting each IP packet in a data stream—used in AWS for **Site-to-Site VPN**.
+- AWS VPC (via **VGW** or **TGW**)
+- On-premises networks (**Customer Gateway**)
+
+**IPsec Key Characteristics**
+| Feature | Details |
+|--------|---------|
+| **Protocols Used** | IKE, ESP, AH (ESP preferred in AWS) |
+| **Encryption** | AES-256 for data encryption |
+| **Integrity** | SHA-2 for message integrity |
+| **Authentication** | Pre-Shared Key (PSK) or certificates |
+| **Modes** | Tunnel mode (used in AWS VPNs) |
+| **Perfect Forward Secrecy** | Enabled (uses DH groups like 14/16/21) |
+
+**VPC + IPsec Deployment Options**
+Option 1: VGW + Site-to-Site VPN
+- Uses **Virtual Private Gateway** (VGW)
+- Supports BGP (dynamic) or static routing
+- Two IPsec tunnels per connection (active/standby)
+- Default AWS ASN: **64512**
+
+Option 2: TGW + Site-to-Site VPN
+- Uses **Transit Gateway**
+- Supports BGP over IPsec tunnels
+- Centralizes routing for **multi-VPC and hybrid architectures**
+
+🧠 Exam Tips
+✅ **Use TGW** when you need centralized, scalable hybrid and inter-VPC connectivity.  
+✅ **Use VGW** for simpler, single-VPC VPN connections.
+- Understand **IKE negotiations** and **IPsec phase 1/2**
+- Remember **two tunnels** per VPN connection – only one is preferred at a time
+- VPCs cannot run **BGP directly**—VGW or TGW does it on their behalf
+- Site-to-Site VPN is backed by **IPsec in tunnel mode**
+- CIDRs for VPN tunnels use **169.254.x.x/30**
 
 ### 📖 Customeer Gateways
+A **Customer Gateway (CGW)** is a **representation of your on-premises VPN device or software appliance** in AWS.
+When to Use Customer Gateway:
+- Connect on-premises to AWS VPC via Site-to-Site VPN
+- Connect Direct Connect + VPN for backup
+- X Connect EC2 instances directly to external networks
+
+**CGW + Site-to-Site VPN**
+- You must **create a CGW resource** in AWS to initiate a Site-to-Site VPN.
+- Combined with:
+  - **Virtual Private Gateway (VGW)** or
+  - **Transit Gateway (TGW)**
+- Together they form an **IPsec VPN tunnel** between AWS and your data center.
 
 ### 📖 AWS Site-to-Site VPN Configuration
+1. **Create Customer Gateway (CGW)**
+   - Use your public IP address (must be static)
+   - Provide ASN (e.g., 65000 for BGP)
+   - Use `ipsec.1` as device type
+
+2. **Create Virtual Private Gateway (VGW)**
+   - Attach to your target VPC
+
+3. **Create Site-to-Site VPN Connection**
+   - Select CGW and VGW
+   - Choose **Static** or **Dynamic routing (BGP)**
+
+4. **Download Configuration**
+   - Select your vendor/model (Cisco, Palo Alto, Fortinet, etc.)
+   - Download the config template
+
+5. **Configure On-Prem Device**
+   - Apply downloaded config
+   - Include BGP setup if using dynamic routing
+   - Monitor tunnel status
+
+**Configuration steps**
+1. **Create/Select TGW**
+   - Attach to desired VPCs
+
+2. **Create CGW Resource**
+
+3. **Create VPN Connection**
+   - Attach to TGW
+   - Specify CGW and routing method
+
+4. **Configure Routing**
+   - In TGW route tables:
+     - Add propagation from VPN
+     - Add static/dynamic routes as needed
 
 ### 📖 AWS VGW and VPN limitation
+A **Virtual Private Gateway (VGW)** is the AWS side of a Site-to-Site VPN connection, used to connect an on-premises network to a single VPC via **IPsec VPN**.
+- Works with **Customer Gateway (CGW)**
+- Terminates VPN tunnels
+- Supports **BGP or static routing**
+- **One VGW per VPC**
+
+**VGW and Site-to-Site VPN Overview**
+| Feature | Description |
+|--------|-------------|
+| IPsec Tunnels | 2 per VPN connection (for redundancy) |
+| Tunnel Mode | IPsec in tunnel mode |
+| Inside IPs | `169.254.x.x/30` |
+| Routing | Static or Dynamic (BGP) |
+| High Availability | Active/standby tunnels with auto failover |
+| CGW Required | Must configure a CGW with static public IP |
+
+**VGW Limitations**
+1. **Single-VPC Scope**
+2. **No BGP on EC2/VPC**: VGW must run BGP on behalf of the VPC
+3. **Bandwidth Limits**
+4. **Latency Depends on Internet**: VPN is over public internet → **variable latency/jitter**
+5. **No NAT Traversal**: CGW public IP must be **directly routable** and **not behind NAT**
+
+**Site-to-Site VPN Limitations**
+| 💻 Device | Customer Gateway must be a compatible IPsec device |
+| 🔀 Routing | BGP preferred, but not supported on all devices |
+| ⚡ Performance | Shared internet → latency spikes, no throughput guarantees |
+| 🔄 Failover | Two tunnels for HA, but only one is preferred active |
+| 🧭 IP Range | Inside IPs must be from `169.254.0.0/16` (AWS-managed) |
+| 🔐 Security | Only supports **IPsec tunnel mode**, not transport mode |
+
+🧠 Exam Tips
 
 ### 📖 VPN Anywhere with AWS Client VPN
 
