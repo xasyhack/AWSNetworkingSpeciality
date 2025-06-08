@@ -1928,17 +1928,207 @@ A **Virtual Private Gateway (VGW)** is the AWS side of a Site-to-Site VPN connec
 | 🧭 IP Range | Inside IPs must be from `169.254.0.0/16` (AWS-managed) |
 | 🔐 Security | Only supports **IPsec tunnel mode**, not transport mode |
 
+| Need | Use |
+|------|-----|
+| Multi-VPC routing | Transit Gateway |
+| Higher throughput | AWS Direct Connect with VPN backup |
+| Centralized hybrid network | TGW + VPN |
+| Global low-latency VPN | Accelerated Site-to-Site VPN 
+
 🧠 Exam Tips
+- VGW only attaches to **1 VPC** — use **TGW** for multiple VPCs
+- You cannot run BGP inside VPC directly — VGW/TGW handles it
+- You must always configure **both tunnels**, even if only one is used
+- **Tunnel IP ranges** use `169.254.x.x/30` subnets
+- VPN is best-effort — **not suitable for high-throughput or low-latency SLAs**
 
 ### 📖 VPN Anywhere with AWS Client VPN
+AWS **Client VPN** is a **fully managed, elastic, remote access VPN service** that allows users to securely connect to AWS and on-premises networks from **anywhere using OpenVPN clients**.
+- **Elastic scaling**: No need to manage capacity
+- **High availability**: Multi-AZ endpoint support
+- **Granular access control**: Via **security groups**, **authorization rules**, and **authentication**
+- **Client subnet IP allocation** (CIDR block must not overlap with target VPC)
+- **Split-tunnel support**: Send only specific traffic through VPN
 
+User Laptop
+│
+OpenVPN
+│
+Client VPN Endpoint (multi-AZ)
+│
+┌────────────┐
+│ VPC Subnet│ ← Must associate with endpoint
+└────────────┘
+│
+VPC Network + On-prem (via TGW/VGW)
+
+| Component | Description |
+|----------|-------------|
+| **Client VPN Endpoint** | Server-side config that users connect to |
+| **Target Network** | VPC subnets that the endpoint is associated with |
+| **Authorization Rules** | Control which users/groups can access which network ranges |
+| **Authentication Methods** | Active Directory, mutual certificate, or SAML/IAM |
+| **Client Software** | Any OpenVPN-compatible client |
+
+| Area | Limitation |
+|------|------------|
+| IP Range | Client CIDR must be **non-overlapping** with VPC or on-prem ranges |
+| IPv6 | Currently **not supported** |
+| MTU | Default ~1370 bytes – may cause fragmentation |
+| BGP | **Not supported** (unlike Site-to-Site VPN) |
+| Traffic Logging | No native flow logs for VPN usage (need CloudWatch metrics) |
+
+🧠 Exam Tips
+- **Client VPN is for end users** (remote workforce), not site-to-site connectivity
+- Supports **Split Tunnel** and **Full Tunnel**
+- Uses **authorization rules** and **security groups** for fine-grained control
+- **No BGP**, no direct support for **IPv6**
+- Supports multiple subnets in **multiple AZs** for HA
+- Route traffic to on-prem via **TGW or VGW**, if needed
+- Must **associate subnets** (at least one) before it becomes usable
+  
 ### 📖 Hub-and-Spoke VPN with AWS VPN CloudHub
+AWS **VPN CloudHub** enables communication **between multiple remote networks (spokes)** via **Virtual Private Gateway (VGW)** in a **hub-and-spoke** topology.
+- Built using **Site-to-Site VPN** over the **public internet**
+- **VGW** acts as the **central hub**
+- No need for AWS Direct Connect
+- Uses **BGP routing** for dynamic advertisement between VPNs
+use cases:
+- You have **multiple branch offices** that need to communicate with each other **via AWS**
+- Each branch has its own **Customer Gateway (CGW)**
+- You're using **VGW** for VPN termination
+- You want to **extend communication** between remote networks through AWS **without Direct Connect or Transit Gateway**
+
+Branch 1 ─┐
+│
+Branch 2 ─┼──> VGW (Hub) in AWS VPC ─> Optional VPC resources
+│
+Branch 3 ─┘
 
 ### 📖 Third-Party VPN Solutions
+Third-party VPN solutions in AWS refer to **non-native VPN appliances** provided by vendors like Cisco, Palo Alto, Fortinet, or open-source solutions (e.g., StrongSwan, pfSense), typically deployed in an **Amazon EC2 instance or AWS Marketplace AMI**.
+use cases:
+- Need for **advanced features**: SSL VPN, DMVPN, high customization
+- Enterprise-grade **firewall + VPN** combo solutions
+- **Policy-based VPNs** (vs AWS route-based IPsec VPN)
+- You need **vendor-specific interoperability** (e.g., Cisco-to-Cisco)
+- High throughput or **performance tuning**
+- Multi-cloud VPN across Azure, GCP, on-prem, and AWS
+- **BGP + IPsec + NAT-T + failover** requirements in hybrid networks
+
+[On-Prem Network]
+│
+IPsec VPN
+│
+[3rd-Party VPN EC2 Instance] ──> [Private Subnets / Apps]
+
+| Component | Description |
+|----------|-------------|
+| **Third-Party Appliance** | VPN software on EC2 (e.g., FortiGate, Cisco ASA, pfSense) |
+| **Customer Gateway (CGW)** | AWS-defined CGW pointing to third-party public IP |
+| **VPN Connection** | Optional; or managed inside third-party appliance |
+| **VPC/Subnets** | Third-party instance sits in a public subnet (NAT or routed) |
+
+🧠 Exam Tips
+- Third-party VPNs are **user-managed appliances**
+- Useful for **advanced IPsec/BGP/NAT** or **security inspection**
+- Deploy from **AWS Marketplace** or custom AMI
+- You manage **scaling, HA, patching, and monitoring**
+- Not integrated with **AWS VGW or TGW directly** unless explicitly configured
+- Common in **Transit VPC** or multi-cloud mesh topologies
 
 ### 📖 AWS VPN Monitoring and Optmization
+AWS provides **built-in monitoring tools** to assess performance and health of VPNs:
+
+| Tool | Use |
+|------|-----|
+| **CloudWatch Metrics** | Monitor VPN tunnel health, bytes in/out, tunnel state |
+| **CloudWatch Logs (VPC Flow Logs)** | View accepted/denied traffic |
+| **AWS CloudTrail** | Log VPN configuration/API changes |
+| **CloudWatch Alarms** | Set thresholds on tunnel state or traffic levels |
+| **Route 53 Health Checks + Lambda** | Trigger tunnel failover if primary fails |
+| **BGP Monitoring** | Check BGP session status and route propagation (manual) |
+
+| Metric | Description |
+|--------|-------------|
+| `TunnelState` | 0 = down, 1 = up |
+| `TunnelDataIn/Out` | Bytes in/out per tunnel |
+| `TunnelStateLastChanged` | Time of last status change |
+| `TunnelPacketDropCount` | Number of packets dropped |
+| `TunnelConnectionEstablished` | Boolean (1 = connected) |
+
+**Optimization Strategies**
+1. **Use Accelerated Site-to-Site VPN**
+2. **Use BGP for Dynamic Failover**
+3. **Tunnel Pinning (ECMP)**
+4. **CloudHub/Transit Gateway with VPN**
+
+ Best Practices for VPN Performance
+- **Enable both tunnels**; monitor for redundancy
+- Use **Accelerated VPN** for latency-sensitive workloads
+- Periodically test **failover scenarios**
+- Tune on-prem MTU and MSS settings to match AWS (MTU ~1500, adjust for IPsec overhead)
+- Monitor VPN health and route reachability with automation (Lambda/CloudWatch)
+- Use **Transit Gateway Network Manager** for global visibility (BGP and VPN-aware)
+
+🧠 Exam Tips
+- `TunnelState = 0` = tunnel is DOWN → trigger alarm
+- VPN throughput limit: **1.25 Gbps** (per VPN)
+- Use **Accelerated VPN** for better throughput over long distances
+- BGP used for **dynamic routing and failover**
+- Use **Transit Gateway + VPN** for scaling and segmentation
+- `169.254.x.x/30` → tunnel IP range (reserved CIDRs)
 
 ### 📖 AWS VPN Cost Optimzation 
+
+| VPN Type              | Pricing Model                            |
+|-----------------------|-------------------------------------------|
+| **Site-to-Site VPN**  | $0.05 per VPN connection-hour            |
+|                       | + Data transfer out charges              |
+| **Accelerated VPN**   | Site-to-Site VPN cost                     |
+|                       | + Global Accelerator usage fees          |
+| **Client VPN**        | $0.10 per endpoint/hour                  |
+|                       | + $0.05 per client connection/hour       |
+| **Transit GW VPN**    | $0.05 per VPN attachment/hour            |
+|                       | + TGW data processing fees               
+
+**Cost Optimization Strategies**
+1. Choose Native AWS VPN When Suitable: Site-to-Site VPN*
+2. Avoid Accelerated VPN Unless Needed
+3. Optimize AWS Client VPN Usage: split tunneling
+4. Use Transit Gateway VPN for Scalability
+5. 📉 Monitor Tunnel Utilization: CloudWatch metrics
+
+| Use Case                           | Recommended Option                 |
+|------------------------------------|------------------------------------|
+| Single-site hybrid connectivity    | Site-to-Site VPN                   |
+| Multi-branch connectivity          | Transit Gateway VPN (CloudHub)     |
+| Global low-latency connections     | Accelerated Site-to-Site VPN       |
+| Developer remote access            | Client VPN with scheduling + split tunneling |
+| Large-scale enterprise VPN         | Transit Gateway + BGP-aware routing |
+
+## AWS Direct Connect and Hybrid DNS
+### 📖 Direct Connect Locations & Hardware
+
+### 📖 DX Connection
+
+### 📖 Virtual Interfaces (VIFs)
+
+### 📖 Virtual LANS (VLANS)
+
+### 📖 Virtual Interfaces & BGP
+
+### 📖 Link Aggregation Group (LAGs)
+
+### 📖 Direct Connect Gateway
+
+### 📖 Direct Connection Security MACsec
+
+### 📖 Well-architecture Direct Connect
+
+### 📖 Hybrid DNS
+
+### 📖 DNS using route 53 resolver endpoints
 
 # Labs
 - [Configure an Amazon EC2 Instance with Dual-Homed Network Connectivity] (https://app.pluralsight.com/hands-on/labs/2c732866-9017-4b5f-bc7b-ee8b6589ef32?ilx=true)
